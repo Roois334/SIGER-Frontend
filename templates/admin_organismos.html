@@ -47,8 +47,8 @@
         <div class="adm-field">
             <select name="estado" class="adm-input">
                 <option value="">Todos los estados</option>
-                <option value="activo" {% if filtros.estado= ="activo" %}selected{% endif %}>Activos</option>
-                <option value="inactivo" {% if filtros.estado= ="inactivo" %}selected{% endif %}>Inactivos</option>
+                <option value="activo" {% if filtros.estado == "activo" %}selected{% endif %}>Activos</option>
+                <option value="inactivo" {% if filtros.estado == "inactivo" %}selected{% endif %}>Inactivos</option>
             </select>
         </div>
         <button type="submit" class="btn-cta adm-filter-btn">Filtrar</button>
