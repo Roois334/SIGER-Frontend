@@ -30,7 +30,7 @@ def _auth_headers():
 def index():
     if "usuario" in session:
         return redirect(url_for("dashboard"))
-    return redirect(url_for("login"))
+    return render_template("landing.html")
 
 
 @app.route("/login", methods=["GET", "POST"])

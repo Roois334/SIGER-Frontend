@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}SIGER — Sistema de Gestión de Emergencias Regional{% endblock %}
+{% block content %}
+
+<div class="container">
+
+  <!-- ===== HERO ===== -->
+  <section class="lh-hero animate-in">
+    <div>
+      <h1 class="lh-title">Cuando ocurre una emergencia, cada <em>minuto</em> cuenta.</h1>
+      <p class="lh-sub">
+        SIGER conecta a los ciudadanos de la Sabana de Occidente con los gestores municipales
+        y los organismos de atención, para que un reporte llegue a quien puede actuar
+        en el menor tiempo posible.
+      </p>
+      <div class="lh-actions">
+        <a href="{{ url_for('registro') }}" class="lh-btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+          Crear cuenta
+        </a>
+        <a href="{{ url_for('login') }}" class="lh-btn-secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+          Ya tengo cuenta
+        </a>
+      </div>
+
+      <div class="lh-stats">
+        <div>
+          <div class="lh-stat-num">8</div>
+          <div class="lh-stat-label">municipios de la Sabana de Occidente cubiertos</div>
+        </div>
+        <div>
+          <div class="lh-stat-num">24/7</div>
+          <div class="lh-stat-label">disponible para registrar un reporte</div>
+        </div>
+        <div>
+          <div class="lh-stat-num">1</div>
+          <div class="lh-stat-label">identificador único por cada reporte, para hacerle seguimiento</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lh-radar" aria-hidden="true">
+      <div class="lh-radar-ring"></div>
+      <div class="lh-radar-ring"></div>
+      <div class="lh-radar-ring"></div>
+      <div class="lh-radar-pulse"></div>
+      <div class="lh-radar-pulse d2"></div>
+      <div class="lh-radar-pulse d3"></div>
+      <div class="lh-radar-core">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.5V5l-8-3-8 3v5.5C4 17.5 12 22 12 22z"/><path d="M12 8v5"/><circle cx="12" cy="16" r=".6" fill="currentColor" stroke="none"/></svg>
+      </div>
+
+      <div class="lh-radar-dot" style="left:50.0%;top:3.0%;"><span>Facatativá</span></div>
+      <div class="lh-radar-dot" style="left:83.2%;top:16.8%;"><span>Madrid</span></div>
+      <div class="lh-radar-dot" style="left:97.0%;top:50.0%;transform:translate(-100%,-50%);"><span style="left:auto;right:16px;transform:none;">Mosquera</span></div>
+      <div class="lh-radar-dot" style="left:83.2%;top:83.2%;"><span>Funza</span></div>
+      <div class="lh-radar-dot" style="left:50.0%;top:97.0%;"><span>Bojacá</span></div>
+      <div class="lh-radar-dot" style="left:16.8%;top:83.2%;"><span style="left:auto;right:16px;transform:none;">El Rosal</span></div>
+      <div class="lh-radar-dot" style="left:3.0%;top:50.0%;"><span style="left:auto;right:16px;transform:none;">Subachoque</span></div>
+      <div class="lh-radar-dot" style="left:16.8%;top:16.8%;"><span style="left:auto;right:16px;transform:none;">Zipacón</span></div>
+    </div>
+  </section>
+
+  <!-- ===== QUÉ ES SIGER ===== -->
+  <section class="lh-section">
+    <div class="lh-about">
+      <div>
+        <h2 class="lh-section-title">Un solo canal para reportar y coordinar</h2>
+        <p class="lh-about-text">
+          Antes de SIGER, una emergencia en la Sabana de Occidente podía reportarse por
+          llamada, WhatsApp o de boca en boca, sin quedar registrada en ningún lado.
+          SIGER le da a cada reporte un dueño, un municipio, un estado y un historial,
+          para que nada se pierda entre la persona que avisa y el organismo que responde.
+        </p>
+      </div>
+
+      <div class="lh-capabilities">
+        <div class="lh-cap-item">
+          <div class="lh-cap-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="lh-cap-body">
+            <h4>Reporte guiado</h4>
+            <p>El ciudadano describe qué pasa, dónde y qué tan grave es, con validaciones que evitan reportes incompletos.</p>
+          </div>
+        </div>
+        <div class="lh-cap-item">
+          <div class="lh-cap-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="lh-cap-body">
+            <h4>Ubicación precisa</h4>
+            <p>Dirección, municipio y coordenadas GPS opcionales, para que el organismo llegue al punto correcto.</p>
+          </div>
+        </div>
+        <div class="lh-cap-item">
+          <div class="lh-cap-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l4.586-4.586a2 2 0 0 1 2.828 0L16 16M14 14l1.586-1.586a2 2 0 0 1 2.828 0L20 14M4 4h16v16H4z"/></svg>
+          </div>
+          <div class="lh-cap-body">
+            <h4>Evidencias adjuntas</h4>
+            <p>Fotos, video o documentos de soporte, cargados directamente desde el mismo formulario.</p>
+          </div>
+        </div>
+        <div class="lh-cap-item">
+          <div class="lh-cap-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <div class="lh-cap-body">
+            <h4>Trazabilidad</h4>
+            <p>Cada reporte recibe un folio único que el ciudadano puede consultar para saber en qué va su caso.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CÓMO FUNCIONA ===== -->
+  <section class="lh-section">
+    <div class="lh-section-head">
+      <h2 class="lh-section-title">Así se registra una emergencia</h2>
+      <p class="lh-section-sub">Cuatro pasos, desde que ocurre el incidente hasta que queda en manos de un organismo de atención.</p>
+    </div>
+    <div class="lh-steps">
+      <div class="lh-step">
+        <div class="lh-step-num">1</div>
+        <h4>Reporta</h4>
+        <p>El ciudadano cuenta qué está pasando: tipo de emergencia, ubicación y una descripción.</p>
+      </div>
+      <div class="lh-step">
+        <div class="lh-step-num">2</div>
+        <h4>Se valida</h4>
+        <p>El sistema confirma que los datos obligatorios estén completos y genera un folio único.</p>
+      </div>
+      <div class="lh-step">
+        <div class="lh-step-num">3</div>
+        <h4>Se asigna</h4>
+        <p>El reporte queda visible para el municipio y el organismo de atención correspondiente.</p>
+      </div>
+      <div class="lh-step">
+        <div class="lh-step-num">4</div>
+        <h4>Se hace seguimiento</h4>
+        <p>El ciudadano puede consultar el estado de su reporte en cualquier momento con su folio.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== COBERTURA ===== -->
+  <section class="lh-section">
+    <div class="lh-section-head">
+      <h2 class="lh-section-title">Cobertura en la Sabana de Occidente</h2>
+      <p class="lh-section-sub">SIGER opera en los ocho municipios de la región, con organismos de atención asociados a cada uno.</p>
+    </div>
+    <div class="lh-coverage-chips">
+      <span class="lh-chip"><span class="lh-chip-dot"></span>Facatativá</span>
+      <span class="lh-chip"><span class="lh-chip-dot"></span>Madrid</span>
+      <span class="lh-chip"><span class="lh-chip-dot"></span>Mosquera</span>
+      <span class="lh-chip"><span class="lh-chip-dot"></span>Funza</span>
+      <span class="lh-chip"><span class="lh-chip-dot"></span>Bojacá</span>
+      <span class="lh-chip"><span class="lh-chip-dot"></span>El Rosal</span>
+      <span class="lh-chip"><span class="lh-chip-dot"></span>Subachoque</span>
+      <span class="lh-chip"><span class="lh-chip-dot"></span>Zipacón</span>
+    </div>
+  </section>
+
+  <!-- ===== PARA QUIÉN ES ===== -->
+  <section class="lh-section">
+    <div class="lh-section-head">
+      <h2 class="lh-section-title">Hecho para tres roles distintos</h2>
+      <p class="lh-section-sub">Cada cuenta ve exactamente lo que necesita para cumplir su parte.</p>
+    </div>
+    <div class="lh-roles">
+      <div class="lh-role">
+        <div class="lh-role-icon" style="background:var(--grn);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        </div>
+        <h4>Ciudadano</h4>
+        <p>Registra emergencias, adjunta evidencias y hace seguimiento a sus propios reportes con su folio único.</p>
+      </div>
+      <div class="lh-role">
+        <div class="lh-role-icon" style="background:linear-gradient(135deg,#F9A825,#FFB300);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1"/></svg>
+        </div>
+        <h4>Gestor municipal</h4>
+        <p>Ve los reportes de su municipio y coordina con los organismos de atención disponibles en la zona.</p>
+      </div>
+      <div class="lh-role">
+        <div class="lh-role-icon" style="background:linear-gradient(135deg,#2E7D32,#00C853);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <h4>Organismo de atención</h4>
+        <p>Bomberos, Cruz Roja y demás organismos reciben los casos asignados a su especialidad y municipio.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA FINAL ===== -->
+  <section class="lh-cta">
+    <div>
+      <div class="lh-cta-title">Crea tu cuenta y ten SIGER listo antes de necesitarlo.</div>
+      <div class="lh-cta-sub">Registrarte toma menos de un minuto. Es gratuito para los ciudadanos de la Sabana de Occidente.</div>
+    </div>
+    <div class="lh-actions">
+      <a href="{{ url_for('registro') }}" class="lh-btn-primary">Crear cuenta</a>
+      <a href="{{ url_for('login') }}" class="lh-btn-secondary">Ingresar</a>
+    </div>
+  </section>
+
+</div>
+
+{% endblock %}
