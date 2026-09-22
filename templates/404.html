@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Página no encontrada — SIGER{% endblock %}
+{% block content %}
+<div class="lw">
+  <div class="lc animate-in" style="text-align:center">
+    <h1 class="ltitle" style="font-size:2.4rem">404</h1>
+    <p class="lsub" style="margin-bottom:20px">La página que buscas no existe.</p>
+    <a href="{{ url_for('index') }}" class="lbtn" style="display:inline-flex">Volver al inicio</a>
+  </div>
+</div>
+{% endblock %}

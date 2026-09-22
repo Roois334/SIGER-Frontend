@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta — SIGER{% endblock %}
+{% block content %}
+
+<div class="lw">
+  <div class="lc animate-in">
+
+    <div class="llogo">
+      <div class="lring">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+      </div>
+      <h1 class="ltitle">Crear cuenta</h1>
+      <p class="lsub">Regístrate como ciudadano de la Sabana de Occidente</p>
+    </div>
+
+    <form method="POST">
+      <div class="lrow2">
+        <div class="lfg">
+          <label class="lfl">Nombre</label>
+          <div class="liw">
+            <input type="text" name="nombre" class="lfi" style="padding-left:13px" placeholder="Tu nombre" required>
+          </div>
+        </div>
+        <div class="lfg">
+          <label class="lfl">Apellido</label>
+          <div class="liw">
+            <input type="text" name="apellido" class="lfi" style="padding-left:13px" placeholder="Tu apellido" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="lfg">
+        <label class="lfl">Correo electrónico</label>
+        <div class="liw">
+          <svg class="lic" viewBox="0 0 24 24" fill="none" width="15" height="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+          <input type="email" name="email" class="lfi" placeholder="tu@correo.com" autocomplete="email" required>
+        </div>
+      </div>
+
+      <div class="lfg">
+        <label class="lfl">Municipio</label>
+        <div class="liw">
+          <select name="municipio" class="lfi" style="padding-left:13px" required>
+            <option value="" disabled selected>Selecciona tu municipio</option>
+            {% for m in municipios %}
+            <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="lrow2">
+        <div class="lfg">
+          <label class="lfl">Contraseña</label>
+          <div class="liw">
+            <input type="password" name="password" class="lfi" style="padding-left:13px" placeholder="Mínimo 6 caracteres" required>
+          </div>
+        </div>
+        <div class="lfg">
+          <label class="lfl">Confirmar</label>
+          <div class="liw">
+            <input type="password" name="confirmar" class="lfi" style="padding-left:13px" placeholder="Repite la contraseña" required>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="lbtn">
+        <svg viewBox="0 0 24 24" fill="none" width="16" height="16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Crear cuenta
+      </button>
+    </form>
+
+    <div class="lfoot">
+      ¿Ya tienes cuenta? <a href="{{ url_for('login') }}" class="lalink">Inicia sesión</a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
