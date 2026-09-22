@@ -26,6 +26,12 @@ def _auth_headers():
     return {"Authorization": "Bearer " + session.get("token", "")}
 
 
+@app.context_processor
+def inject_backend_url():
+    """Permite armar en las plantillas la URL completa de archivos servidos por el backend (ej. fotos de perfil)."""
+    return {"backend_url": BACKEND_URL}
+
+
 @app.route("/")
 def index():
     if "usuario" in session:
@@ -104,6 +110,41 @@ def registro():
 def dashboard():
     return render_template("dashboard.html",
                             role_label=ROLE_LABELS.get(session["usuario"]["rol"], session["usuario"]["rol"]))
+
+
+@app.route("/perfil")
+@login_required
+def perfil():
+    return render_template("perfil.html",
+                            role_label=ROLE_LABELS.get(session["usuario"]["rol"], session["usuario"]["rol"]))
+
+
+@app.route("/perfil/foto", methods=["POST"])
+@login_required
+def perfil_foto():
+    archivo = request.files.get("foto")
+    if not archivo or not archivo.filename:
+        flash("Selecciona una imagen primero", "error")
+        return redirect(url_for("perfil"))
+
+    try:
+        r = requests.post(
+            BACKEND_URL + "/api/usuarios/me/foto",
+            headers=_auth_headers(),
+            files={"foto": (archivo.filename, archivo.stream, archivo.mimetype)},
+            timeout=10,
+        )
+    except requests.exceptions.ConnectionError:
+        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        return redirect(url_for("perfil"))
+
+    if r.status_code == 200:
+        session["usuario"] = r.json()["usuario"]
+        flash("Foto de perfil actualizada", "success")
+    else:
+        flash(r.json().get("error", "No se pudo actualizar la foto"), "error")
+
+    return redirect(url_for("perfil"))
 
 @app.route("/admin/usuarios")
 @admin_required

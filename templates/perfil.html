@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Mi perfil — SIGER{% endblock %}
+{% block content %}
+
+{% set u = session['usuario'] %}
+{% set iniciales = (u['nombre'][0] ~ u['apellido'][0]) | upper if u.get('apellido') else (u['nombre'][0]) | upper %}
+
+<div class="container">
+  <div class="profile-hero animate-in">
+    <div class="user-bubble user-bubble-xl">
+      {% if u.get('foto_url') %}<img src="{{ backend_url }}{{ u['foto_url'] }}" alt="">{% else %}{{ iniciales }}{% endif %}
+    </div>
+    <div>
+      <h1 class="dash-title">{{ u['nombre'] }} {{ u['apellido'] }}</h1>
+      <p class="dash-sub">{{ u['email'] }}</p>
+      <span class="role-pill">
+        <svg viewBox="0 0 24 24" fill="none" width="13" height="13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+        {{ role_label }}
+      </span>
+
+      <form action="{{ url_for('perfil_foto') }}" method="post" enctype="multipart/form-data" class="profile-photo-form">
+        <label for="foto" class="btn-cta profile-photo-btn">Cambiar foto</label>
+        <input type="file" id="foto" name="foto" accept="image/png, image/jpeg, image/webp"
+               onchange="this.form.submit()" hidden>
+      </form>
+    </div>
+  </div>
+
+  <div class="profile-grid">
+    <div class="dash-card">
+      <div class="dash-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <h3>Nombre completo</h3>
+      <p>{{ u['nombre'] }} {{ u['apellido'] }}</p>
+    </div>
+
+    <div class="dash-card">
+      <div class="dash-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg>
+      </div>
+      <h3>Correo</h3>
+      <p>{{ u['email'] }}</p>
+    </div>
+
+    {% if u.get('municipio') %}
+    <div class="dash-card">
+      <div class="dash-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <h3>Municipio</h3>
+      <p>{{ u['municipio'] }}</p>
+    </div>
+    {% endif %}
+
+    <div class="dash-card">
+      <div class="dash-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+      </div>
+      <h3>Rol</h3>
+      <p>{{ role_label }}</p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
