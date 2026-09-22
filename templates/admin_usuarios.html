@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Administrar usuarios — SIGER{% endblock %}
+{% block content %}
+
+<div class="container">
+  <div class="dash-hero animate-in">
+    <h1 class="dash-title">Administrar usuarios</h1>
+    <p class="dash-sub">Consulta, edita, cambia roles y activa o desactiva las cuentas registradas en SIGER.</p>
+  </div>
+
+  <form class="adm-filters" method="GET" action="{{ url_for('admin_usuarios') }}">
+    <div class="adm-field adm-field-grow">
+      <input type="text" name="q" class="adm-input" placeholder="Buscar por nombre, apellido o correo..."
+             value="{{ filtros.q }}">
+    </div>
+    <div class="adm-field">
+      <select name="rol" class="adm-input">
+        <option value="">Todos los roles</option>
+        {% for valor, etiqueta in role_labels.items() %}
+        <option value="{{ valor }}" {% if filtros.rol == valor %}selected{% endif %}>{{ etiqueta }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="adm-field">
+      <select name="estado" class="adm-input">
+        <option value="">Todos los estados</option>
+        <option value="activo" {% if filtros.estado == "activo" %}selected{% endif %}>Activos</option>
+        <option value="inactivo" {% if filtros.estado == "inactivo" %}selected{% endif %}>Inactivos</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-cta adm-filter-btn">Filtrar</button>
+    {% if filtros.q or filtros.rol or filtros.estado %}
+    <a href="{{ url_for('admin_usuarios') }}" class="adm-clear-link">Limpiar</a>
+    {% endif %}
+  </form>
+
+  <div class="adm-table-wrap animate-in">
+    {% if usuarios %}
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Correo</th>
+          <th>Municipio</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr>
+          <td>{{ u.nombre }} {{ u.apellido }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.municipio or "—" }}</td>
+          <td><span class="adm-badge adm-badge-rol">{{ role_labels.get(u.rol, u.rol) }}</span></td>
+          <td>
+            {% if u.activo %}
+            <span class="adm-badge adm-badge-activo">Activo</span>
+            {% else %}
+            <span class="adm-badge adm-badge-inactivo">Inactivo</span>
+            {% endif %}
+          </td>
+          <td class="adm-actions">
+            <a href="{{ url_for('admin_usuario_editar', user_id=u.id) }}" class="adm-btn adm-btn-edit">Editar</a>
+            <form method="POST" action="{{ url_for('admin_usuario_estado', user_id=u.id) }}"
+                  onsubmit="return confirm('{{ '¿Desactivar' if u.activo else '¿Activar' }} la cuenta de {{ u.nombre }}?');">
+              <input type="hidden" name="activo" value="{{ 0 if u.activo else 1 }}">
+              {% if u.activo %}
+              <button type="submit" class="adm-btn adm-btn-danger">Desactivar</button>
+              {% else %}
+              <button type="submit" class="adm-btn adm-btn-ok">Activar</button>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="adm-empty">No se encontraron usuarios con esos filtros.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

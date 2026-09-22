@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Editar usuario — SIGER{% endblock %}
+{% block content %}
+
+<div class="lw">
+  <div class="lc adm-edit-card animate-in">
+    <div class="llogo">
+      <div class="lring">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <h1 class="ltitle">Editar usuario</h1>
+      <p class="lsub">{{ usuario.email }}</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_usuario_editar', user_id=usuario.id) }}">
+      <div class="lrow2">
+        <div class="lfg">
+          <label class="lfl">Nombre</label>
+          <div class="liw">
+            <input type="text" name="nombre" class="lfi" style="padding-left:13px" required value="{{ usuario.nombre }}">
+          </div>
+        </div>
+        <div class="lfg">
+          <label class="lfl">Apellido</label>
+          <div class="liw">
+            <input type="text" name="apellido" class="lfi" style="padding-left:13px" required value="{{ usuario.apellido }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="lfg">
+        <label class="lfl">Correo</label>
+        <div class="liw">
+          <input type="email" name="email" class="lfi" style="padding-left:13px" required value="{{ usuario.email }}">
+        </div>
+      </div>
+
+      <div class="lfg">
+        <label class="lfl">Municipio</label>
+        <div class="liw">
+          <select name="municipio" class="lfi" style="padding-left:13px">
+            <option value="">Sin municipio</option>
+            {% for m in municipios %}
+            <option value="{{ m }}" {% if usuario.municipio == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="lfg">
+        <label class="lfl">Rol</label>
+        <div class="liw">
+          <select name="rol" class="lfi" style="padding-left:13px" required>
+            {% for valor, etiqueta in role_labels.items() %}
+            <option value="{{ valor }}" {% if usuario.rol == valor %}selected{% endif %}>{{ etiqueta }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="lbtn">Guardar cambios</button>
+    </form>
+
+    <p class="lfoot">
+      <a href="{{ url_for('admin_usuarios') }}" class="lalink">&larr; Volver al listado</a>
+    </p>
+  </div>
+</div>
+
+{% endblock %}
