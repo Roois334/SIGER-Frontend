@@ -464,7 +464,7 @@ html[data-theme="light"] .bg-siger::after {
 
 /* CTA final */
 .lh-cta {
-  background:var(--grad-hero); border-radius:24px; padding:52px 44px; margin:56px 0 40px;
+  background:var(--gr); border-radius:24px; padding:52px 44px; margin:56px 0 40px;
   display:flex; align-items:center; justify-content:space-between; gap:32px; flex-wrap:wrap;
   box-shadow:var(--shadow-lg); position:relative; overflow:hidden;
 }
