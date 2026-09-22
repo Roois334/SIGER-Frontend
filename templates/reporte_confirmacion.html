@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Reporte enviado — SIGER{% endblock %}
+{% block content %}
+
+<div class="lw">
+    <div class="lc adm-edit-card animate-in" style="text-align:center;">
+        <div class="llogo">
+            <div class="lring" style="border-color:var(--ok);color:var(--ok);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <h1 class="ltitle">¡Reporte enviado!</h1>
+            <p class="lsub">Tu emergencia quedó registrada y asociada a tu cuenta.</p>
+        </div>
+
+        <div style="background:var(--borde2);border-radius:14px;padding:18px;margin:18px 0;">
+            <p style="font-size:.8rem;color:var(--gs);margin-bottom:4px;">Identificador de tu reporte</p>
+            <p style="font-size:1.4rem;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;color:var(--bl);">{{ reporte.folio }}</p>
+            <p style="font-size:.8rem;color:var(--gs);margin-top:6px;">Guarda este número para hacerle seguimiento.</p>
+        </div>
+
+        <p class="lfoot">
+            <a href="{{ url_for('mis_reportes') }}" class="lalink">Ver mis reportes</a>
+            &nbsp;·&nbsp;
+            <a href="{{ url_for('dashboard') }}" class="lalink">Volver al panel</a>
+        </p>
+    </div>
+</div>
+
+{% endblock %}

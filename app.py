@@ -395,6 +395,96 @@ def admin_organismo_estado(organismo_id):
 
     return redirect(url_for("admin_organismos"))
 
+# ---------------- Reportes de emergencia ----------------
+
+TIPOS_EMERGENCIA = [
+    "Incendio",
+    "Inundacion",
+    "Accidente de transito",
+    "Deslizamiento",
+    "Fuga o derrame de sustancias",
+    "Emergencia medica",
+    "Otro",
+]
+
+
+@app.route("/reportar-emergencia", methods=["GET", "POST"])
+@login_required
+def reportar_emergencia():
+    try:
+        r_mun = requests.get(BACKEND_URL + "/api/municipios/activos", headers=_auth_headers(), timeout=5)
+        municipios = r_mun.json().get("municipios", []) if r_mun.status_code == 200 else []
+    except requests.exceptions.ConnectionError:
+        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        municipios = []
+
+    if request.method == "POST":
+        form_data = {
+            "tipo": request.form.get("tipo", ""),
+            "municipio_id": request.form.get("municipio_id", ""),
+            "direccion": request.form.get("direccion", "").strip(),
+            "latitud": request.form.get("latitud", ""),
+            "longitud": request.form.get("longitud", ""),
+            "descripcion": request.form.get("descripcion", "").strip(),
+            "afectados": request.form.get("afectados", "0"),
+        }
+
+        payload = {
+            "tipo": form_data["tipo"],
+            "municipio_id": form_data["municipio_id"],
+            "direccion": form_data["direccion"],
+            "latitud": form_data["latitud"],
+            "longitud": form_data["longitud"],
+            "descripcion": form_data["descripcion"],
+            "afectados": form_data["afectados"],
+        }
+
+        archivos = [
+            ("evidencias", (f.filename, f.stream, f.mimetype))
+            for f in request.files.getlist("evidencias") if f and f.filename
+        ]
+
+        try:
+            r = requests.post(
+                BACKEND_URL + "/api/reportes",
+                data=payload,
+                files=archivos if archivos else None,
+                headers=_auth_headers(),
+                timeout=15,
+            )
+        except requests.exceptions.ConnectionError:
+            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            return render_template("reportar_emergencia.html", tipos=TIPOS_EMERGENCIA,
+                                    municipios=municipios, form_data=form_data)
+
+        if r.status_code == 201:
+            reporte = r.json()["reporte"]
+            flash("Reporte enviado correctamente", "success")
+            return render_template("reporte_confirmacion.html", reporte=reporte)
+
+        flash(r.json().get("error", "No se pudo registrar el reporte"), "error")
+        return render_template("reportar_emergencia.html", tipos=TIPOS_EMERGENCIA,
+                                municipios=municipios, form_data=form_data)
+
+    return render_template("reportar_emergencia.html", tipos=TIPOS_EMERGENCIA, municipios=municipios, form_data=None)
+
+
+@app.route("/mis-reportes")
+@login_required
+def mis_reportes():
+    try:
+        r = requests.get(BACKEND_URL + "/api/reportes", headers=_auth_headers(), timeout=5)
+    except requests.exceptions.ConnectionError:
+        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        return render_template("mis_reportes.html", reportes=[])
+
+    if r.status_code != 200:
+        flash(r.json().get("error", "No se pudo cargar tus reportes"), "error")
+        return render_template("mis_reportes.html", reportes=[])
+
+    return render_template("mis_reportes.html", reportes=r.json().get("reportes", []))
+
+
 @app.route("/logout")
 def logout():
     session.clear()

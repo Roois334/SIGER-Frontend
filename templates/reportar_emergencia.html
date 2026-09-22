@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Reportar emergencia — SIGER{% endblock %}
+{% block content %}
+
+<div class="container">
+    <div class="dash-hero animate-in">
+        <h1 class="dash-title">Reportar una emergencia</h1>
+        <p class="dash-sub">Cuéntanos qué está pasando. Entre más completa sea la información, más rápido podrá actuar el organismo correspondiente.</p>
+    </div>
+
+    <div class="adm-table-wrap animate-in" style="padding:24px;max-width:760px;">
+        <form method="POST" action="{{ url_for('reportar_emergencia') }}" enctype="multipart/form-data">
+
+            <div style="display:flex;gap:14px;flex-wrap:wrap;">
+                <div class="lfg" style="flex:1 1 240px;">
+                    <label class="lfl">Tipo de emergencia *</label>
+                    <div class="liw">
+                        <select name="tipo" class="lfi" required>
+                            <option value="">Selecciona un tipo...</option>
+                            {% for t in tipos %}
+                            <option value="{{ t }}" {% if form_data and form_data.tipo == t %}selected{% endif %}>{{ t }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="lfg" style="flex:1 1 200px;">
+                    <label class="lfl">Municipio *</label>
+                    <div class="liw">
+                        <select name="municipio_id" class="lfi" required>
+                            <option value="">Selecciona un municipio...</option>
+                            {% for m in municipios %}
+                            <option value="{{ m.id }}" {% if form_data and form_data.municipio_id == m.id|string %}selected{% endif %}>{{ m.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lfg">
+                <label class="lfl">Dirección o punto de referencia *</label>
+                <div class="liw">
+                    <input type="text" name="direccion" class="lfi" style="padding-left:13px" required maxlength="200"
+                           placeholder="Ej: Calle 10 # 5-20, barrio El Rosal"
+                           value="{{ form_data.direccion if form_data else '' }}">
+                </div>
+            </div>
+
+            <div style="display:flex;gap:14px;flex-wrap:wrap;">
+                <div class="lfg" style="flex:1 1 200px;">
+                    <label class="lfl">Latitud (opcional)</label>
+                    <div class="liw">
+                        <input type="text" name="latitud" id="latitud" class="lfi" style="padding-left:13px" placeholder="Ej: 4.8140" value="{{ form_data.latitud if form_data else '' }}">
+                    </div>
+                </div>
+                <div class="lfg" style="flex:1 1 200px;">
+                    <label class="lfl">Longitud (opcional)</label>
+                    <div class="liw">
+                        <input type="text" name="longitud" id="longitud" class="lfi" style="padding-left:13px" placeholder="Ej: -74.3480" value="{{ form_data.longitud if form_data else '' }}">
+                    </div>
+                </div>
+                <div style="display:flex;align-items:flex-end;margin-bottom:14px;">
+                    <button type="button" id="btn-ubicacion" class="adm-btn adm-btn-edit">Usar mi ubicación actual</button>
+                </div>
+            </div>
+
+            <div class="lfg">
+                <label class="lfl">Descripción del incidente *</label>
+                <div class="liw">
+                    <textarea name="descripcion" class="lfi" style="padding:13px;min-height:120px;resize:vertical;" required
+                              minlength="15" maxlength="2000"
+                              placeholder="Describe qué ocurrió, cuándo empezó y cualquier detalle relevante (mínimo 15 caracteres)">{{ form_data.descripcion if form_data else '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="lfg" style="max-width:200px;">
+                <label class="lfl">Personas afectadas (aprox.)</label>
+                <div class="liw">
+                    <input type="number" name="afectados" class="lfi" style="padding-left:13px" min="0" value="{{ form_data.afectados if form_data else 0 }}">
+                </div>
+            </div>
+
+            <div class="lfg">
+                <label class="lfl">Evidencias (fotos, video o PDF — opcional, máx. 5 archivos)</label>
+                <div class="liw">
+                    <input type="file" name="evidencias" class="lfi" style="padding:10px 13px" multiple
+                           accept="image/*,video/mp4,application/pdf">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-cta adm-filter-btn" style="margin-top:10px;">Enviar reporte</button>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('btn-ubicacion').addEventListener('click', function () {
+    if (!navigator.geolocation) {
+        alert('Tu navegador no soporta geolocalización.');
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(function (pos) {
+        document.getElementById('latitud').value = pos.coords.latitude.toFixed(6);
+        document.getElementById('longitud').value = pos.coords.longitude.toFixed(6);
+    }, function () {
+        alert('No se pudo obtener tu ubicación. Puedes escribirla manualmente si la conoces.');
+    });
+});
+</script>
+
+{% endblock %}

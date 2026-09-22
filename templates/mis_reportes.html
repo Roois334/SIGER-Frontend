@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Mis reportes — SIGER{% endblock %}
+{% block content %}
+
+<div class="container">
+    <div class="dash-hero animate-in">
+        <h1 class="dash-title">Mis reportes</h1>
+        <p class="dash-sub">Emergencias que has registrado.</p>
+    </div>
+
+    <div class="adm-table-wrap animate-in">
+        {% if reportes %}
+        <table class="adm-table">
+            <thead>
+                <tr>
+                    <th>Folio</th>
+                    <th>Tipo</th>
+                    <th>Municipio</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Evidencias</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in reportes %}
+                <tr>
+                    <td>{{ r.folio }}</td>
+                    <td>{{ r.tipo }}</td>
+                    <td>{{ r.municipio or "—" }}</td>
+                    <td>{{ r.fecha_hora[:16].replace('T', ' ') if r.fecha_hora else "—" }}</td>
+                    <td>
+                        {% if r.estado == 'pendiente' %}
+                        <span class="adm-badge adm-badge-inactivo">Pendiente</span>
+                        {% else %}
+                        <span class="adm-badge adm-badge-activo">{{ r.estado|capitalize }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ r.evidencias|length }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="adm-empty">Todavía no has registrado ningún reporte.</div>
+        {% endif %}
+    </div>
+
+    <div style="margin-top:16px;">
+        <a href="{{ url_for('reportar_emergencia') }}" class="btn-cta adm-filter-btn">Registrar nueva emergencia</a>
+    </div>
+</div>
+
+{% endblock %}

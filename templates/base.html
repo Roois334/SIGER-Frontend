@@ -36,6 +36,8 @@
       <div class="nav-links">
           {% if session.get('usuario') %}
           <a href="{{ url_for('dashboard') }}" class="nav-link">Panel</a>
+          <a href="{{ url_for('reportar_emergencia') }}" class="nav-link">Reportar emergencia</a>
+          <a href="{{ url_for('mis_reportes') }}" class="nav-link">Mis reportes</a>
           {% if session['usuario']['rol'] == 'administrador' %}
           <a href="{{ url_for('admin_usuarios') }}" class="nav-link">Usuarios</a>
           <a href="{{ url_for('admin_municipios') }}" class="nav-link">Municipios</a>
