@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Administrar municipios — SIGER{% endblock %}
+{% block content %}
+
+<div class="container">
+  <div class="dash-hero animate-in">
+    <h1 class="dash-title">Administrar municipios</h1>
+    <p class="dash-sub">Registra, edita, activa o desactiva los municipios disponibles en SIGER.</p>
+  </div>
+
+  <div class="adm-table-wrap animate-in" style="padding:20px 24px;margin-bottom:20px;">
+    <form method="POST" action="{{ url_for('admin_municipios') }}" style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="lfg" style="margin-bottom:0;min-width:160px;">
+        <label class="lfl">Codigo</label>
+        <div class="liw"><input type="text" name="codigo" class="lfi" style="padding-left:13px" required maxlength="20"></div>
+      </div>
+      <div class="lfg" style="margin-bottom:0;flex:1 1 240px;">
+        <label class="lfl">Nombre</label>
+        <div class="liw"><input type="text" name="nombre" class="lfi" style="padding-left:13px" required maxlength="80"></div>
+      </div>
+      <button type="submit" class="btn-cta adm-filter-btn">Crear municipio</button>
+    </form>
+  </div>
+
+  <form class="adm-filters" method="GET" action="{{ url_for('admin_municipios') }}">
+    <div class="adm-field adm-field-grow">
+      <input type="text" name="q" class="adm-input" placeholder="Buscar por codigo o nombre..." value="{{ filtros.q }}">
+    </div>
+    <div class="adm-field">
+      <select name="estado" class="adm-input">
+        <option value="">Todos los estados</option>
+        <option value="activo" {% if filtros.estado == "activo" %}selected{% endif %}>Activos</option>
+        <option value="inactivo" {% if filtros.estado == "inactivo" %}selected{% endif %}>Inactivos</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-cta adm-filter-btn">Filtrar</button>
+    {% if filtros.q or filtros.estado %}
+    <a href="{{ url_for('admin_municipios') }}" class="adm-clear-link">Limpiar</a>
+    {% endif %}
+  </form>
+
+  <div class="adm-table-wrap animate-in">
+    {% if municipios %}
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Codigo</th>
+          <th>Municipio</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in municipios %}
+        <tr>
+          <td>{{ m.codigo }}</td>
+          <td>{{ m.nombre }}</td>
+          <td>
+            {% if m.activo %}
+            <span class="adm-badge adm-badge-activo">Activo</span>
+            {% else %}
+            <span class="adm-badge adm-badge-inactivo">Inactivo</span>
+            {% endif %}
+          </td>
+          <td class="adm-actions">
+            <a href="{{ url_for('admin_municipio_editar', municipio_id=m.id) }}" class="adm-btn adm-btn-edit">Editar</a>
+            <form method="POST" action="{{ url_for('admin_municipio_estado', municipio_id=m.id) }}"
+                  onsubmit="return confirm('{{ '¿Desactivar' if m.activo else '¿Activar' }} el municipio {{ m.nombre }}?');">
+              <input type="hidden" name="activo" value="{{ 0 if m.activo else 1 }}">
+              {% if m.activo %}
+              <button type="submit" class="adm-btn adm-btn-danger">Desactivar</button>
+              {% else %}
+              <button type="submit" class="adm-btn adm-btn-ok">Activar</button>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="adm-empty">No se encontraron municipios con esos filtros.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

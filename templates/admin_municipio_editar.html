@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Editar municipio — SIGER{% endblock %}
+{% block content %}
+
+<div class="lw">
+    <div class="lc adm-edit-card animate-in">
+        <div class="llogo">
+            <div class="lring">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1" /></svg>
+            </div>
+            <h1 class="ltitle">Editar municipio</h1>
+            <p class="lsub">{{ municipio.nombre }}</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin_municipio_editar', municipio_id=municipio.id) }}">
+            <div class="lfg">
+                <label class="lfl">Codigo</label>
+                <div class="liw">
+                    <input type="text" name="codigo" class="lfi" style="padding-left:13px" required maxlength="20" value="{{ municipio.codigo }}">
+                </div>
+            </div>
+
+            <div class="lfg">
+                <label class="lfl">Nombre</label>
+                <div class="liw">
+                    <input type="text" name="nombre" class="lfi" style="padding-left:13px" required maxlength="80" value="{{ municipio.nombre }}">
+                </div>
+            </div>
+
+            <button type="submit" class="lbtn">Guardar cambios</button>
+        </form>
+
+        <p class="lfoot">
+            <a href="{{ url_for('admin_municipios') }}" class="lalink">&larr; Volver al listado</a>
+        </p>
+    </div>
+</div>
+
+{% endblock %}

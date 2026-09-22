@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Editar organismo — SIGER{% endblock %}
+{% block content %}
+
+<div class="lw">
+    <div class="lc adm-edit-card animate-in" style="max-width:560px;">
+        <div class="llogo">
+            <div class="lring">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.5V5l-8-3-8 3v5.5C4 17.5 12 22 12 22z" /></svg>
+            </div>
+            <h1 class="ltitle">Editar organismo</h1>
+            <p class="lsub">{{ organismo.nombre }}</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin_organismo_editar', organismo_id=organismo.id) }}">
+            <div class="lrow2">
+                <div class="lfg">
+                    <label class="lfl">Codigo</label>
+                    <div class="liw">
+                        <input type="text" name="codigo" class="lfi" style="padding-left:13px" required maxlength="20" value="{{ organismo.codigo }}">
+                    </div>
+                </div>
+                <div class="lfg">
+                    <label class="lfl">Tipo</label>
+                    <div class="liw">
+                        <input type="text" name="tipo" class="lfi" style="padding-left:13px" maxlength="60" value="{{ organismo.tipo or '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="lfg">
+                <label class="lfl">Nombre</label>
+                <div class="liw">
+                    <input type="text" name="nombre" class="lfi" style="padding-left:13px" required maxlength="120" value="{{ organismo.nombre }}">
+                </div>
+            </div>
+
+            <div class="lfg">
+                <label class="lfl">Municipios donde opera</label>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;">
+                    {% for m in municipios %}
+                    <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--bl);">
+                        <input type="checkbox" name="municipios" value="{{ m.id }}" {% if m.id in ids_asociados %}checked{% endif %}> {{ m.nombre }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <button type="submit" class="lbtn">Guardar cambios</button>
+        </form>
+
+        <p class="lfoot">
+            <a href="{{ url_for('admin_organismos') }}" class="lalink">&larr; Volver al listado</a>
+        </p>
+    </div>
+</div>
+
+{% endblock %}

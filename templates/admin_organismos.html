@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Administrar organismos — SIGER{% endblock %}
+{% block content %}
+
+<div class="container">
+    <div class="dash-hero animate-in">
+        <h1 class="dash-title">Administrar organismos</h1>
+        <p class="dash-sub">Registra organismos de atencion y asociarlos con los municipios donde operan.</p>
+    </div>
+
+    <div class="adm-table-wrap animate-in" style="padding:20px 24px;margin-bottom:20px;">
+        <form method="POST" action="{{ url_for('admin_organismos') }}">
+            <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+                <div class="lfg" style="margin-bottom:0;min-width:140px;">
+                    <label class="lfl">Codigo</label>
+                    <div class="liw"><input type="text" name="codigo" class="lfi" style="padding-left:13px" required maxlength="20"></div>
+                </div>
+                <div class="lfg" style="margin-bottom:0;flex:1 1 220px;">
+                    <label class="lfl">Nombre</label>
+                    <div class="liw"><input type="text" name="nombre" class="lfi" style="padding-left:13px" required maxlength="120"></div>
+                </div>
+                <div class="lfg" style="margin-bottom:0;min-width:180px;">
+                    <label class="lfl">Tipo</label>
+                    <div class="liw"><input type="text" name="tipo" class="lfi" style="padding-left:13px" placeholder="Bomberos, Cruz Roja, etc." maxlength="60"></div>
+                </div>
+            </div>
+
+            <div class="lfg" style="margin-top:14px;">
+                <label class="lfl">Municipios donde opera</label>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;">
+                    {% for m in municipios %}
+                    <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--bl);">
+                        <input type="checkbox" name="municipios" value="{{ m.id }}"> {{ m.nombre }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <button type="submit" class="btn-cta adm-filter-btn" style="margin-top:14px;">Crear organismo</button>
+        </form>
+    </div>
+
+    <form class="adm-filters" method="GET" action="{{ url_for('admin_organismos') }}">
+        <div class="adm-field adm-field-grow">
+            <input type="text" name="q" class="adm-input" placeholder="Buscar por codigo o nombre..." value="{{ filtros.q }}">
+        </div>
+        <div class="adm-field">
+            <select name="estado" class="adm-input">
+                <option value="">Todos los estados</option>
+                <option value="activo" {% if filtros.estado= ="activo" %}selected{% endif %}>Activos</option>
+                <option value="inactivo" {% if filtros.estado= ="inactivo" %}selected{% endif %}>Inactivos</option>
+            </select>
+        </div>
+        <button type="submit" class="btn-cta adm-filter-btn">Filtrar</button>
+        {% if filtros.q or filtros.estado %}
+        <a href="{{ url_for('admin_organismos') }}" class="adm-clear-link">Limpiar</a>
+        {% endif %}
+    </form>
+
+    <div class="adm-table-wrap animate-in">
+        {% if organismos %}
+        <table class="adm-table">
+            <thead>
+                <tr>
+                    <th>Codigo</th>
+                    <th>Organismo</th>
+                    <th>Tipo</th>
+                    <th>Municipios</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in organismos %}
+                <tr>
+                    <td>{{ o.codigo }}</td>
+                    <td>{{ o.nombre }}</td>
+                    <td>{{ o.tipo or "—" }}</td>
+                    <td>{{ (o.municipios | map(attribute='nombre') | list | join(', ')) or "—" }}</td>
+                    <td>
+                        {% if o.activo %}
+                        <span class="adm-badge adm-badge-activo">Activo</span>
+                        {% else %}
+                        <span class="adm-badge adm-badge-inactivo">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="adm-actions">
+                        <a href="{{ url_for('admin_organismo_editar', organismo_id=o.id) }}" class="adm-btn adm-btn-edit">Editar</a>
+                        <form method="POST" action="{{ url_for('admin_organismo_estado', organismo_id=o.id) }}"
+                              onsubmit="return confirm('{{ '¿Desactivar' if o.activo else '¿Activar' }} el organismo {{ o.nombre }}?');">
+                            <input type="hidden" name="activo" value="{{ 0 if o.activo else 1 }}">
+                            {% if o.activo %}
+                            <button type="submit" class="adm-btn adm-btn-danger">Desactivar</button>
+                            {% else %}
+                            <button type="submit" class="adm-btn adm-btn-ok">Activar</button>
+                            {% endif %}
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="adm-empty">No se encontraron organismos con esos filtros.</div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
