@@ -19,6 +19,7 @@
                     <th>Fecha</th>
                     <th>Estado</th>
                     <th>Evidencias</th>
+                    <th>Ubicación</th>
                 </tr>
             </thead>
             <tbody>
@@ -36,13 +37,25 @@
                         {% endif %}
                     </td>
                     <td>{{ r.evidencias|length }}</td>
+                    <td>
+                        {% if r.latitud and r.longitud %}
+                        <button type="button" class="adm-btn adm-btn-edit btn-ver-mapa"
+                                data-lat="{{ r.latitud }}" data-lon="{{ r.longitud }}" data-target="mapa-{{ r.id }}">
+                            Ver mapa
+                        </button>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
                 </tr>
+                {% if r.latitud and r.longitud %}
+                <tr id="fila-mapa-{{ r.id }}" style="display:none;">
+                    <td colspan="7">
+                        <div id="mapa-{{ r.id }}" style="height:260px;border-radius:12px;overflow:hidden;border:1px solid var(--borde);"></div>
+                    </td>
+                </tr>
+                {% endif %}
                 {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="adm-empty">Todavía no has registrado ningún reporte.</div>
-        {% endif %}
     </div>
 
     <div style="margin-top:16px;">
@@ -50,4 +63,34 @@
     </div>
 </div>
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+var mapasIniciados = {};
+document.querySelectorAll('.btn-ver-mapa').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var targetId = btn.getAttribute('data-target');
+        var fila = document.getElementById('fila-' + targetId);
+        var abierta = fila.style.display !== 'none';
+
+        fila.style.display = abierta ? 'none' : 'table-row';
+        btn.textContent = abierta ? 'Ver mapa' : 'Ocultar mapa';
+
+        if (!abierta && !mapasIniciados[targetId]) {
+            var lat = parseFloat(btn.getAttribute('data-lat'));
+            var lon = parseFloat(btn.getAttribute('data-lon'));
+            var mapa = L.map(targetId, { scrollWheelZoom: false }).setView([lat, lon], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+            }).addTo(mapa);
+            L.marker([lat, lon]).addTo(mapa);
+            mapasIniciados[targetId] = true;
+        }
+    });
+});
+</script>
 {% endblock %}
