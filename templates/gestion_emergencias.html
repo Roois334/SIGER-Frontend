@@ -62,6 +62,7 @@
           <th>Estado</th>
           <th>Fecha</th>
           <th>Afectados</th>
+          <th>Evidencias</th>
         </tr>
       </thead>
       <tbody>
@@ -88,7 +89,30 @@
           </td>
           <td>{{ r.fecha_hora[:16].replace('T', ' ') if r.fecha_hora else "—" }}</td>
           <td>{{ r.afectados }}</td>
+          <td>
+            {% if r.evidencias %}
+            <button type="button" class="adm-btn adm-btn-edit btn-ver-evidencias" data-target="evid-{{ r.id }}">
+                Ver ({{ r.evidencias|length }})
+            </button>
+            {% else %}
+            —
+            {% endif %}
+          </td>
         </tr>
+        {% if r.evidencias %}
+        <tr id="fila-evid-{{ r.id }}" style="display:none;">
+            <td colspan="8">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    {% for e in r.evidencias %}
+                    <a href="{{ url_for('ver_evidencia', evidencia_id=e.id) }}" target="_blank"
+                       class="adm-btn adm-btn-edit" style="text-decoration:none;">
+                        {{ e.nombre_archivo }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </td>
+        </tr>
+        {% endif %}
         {% endfor %}
       </tbody>
     </table>
@@ -98,4 +122,18 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.querySelectorAll('.btn-ver-evidencias').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var targetId = btn.getAttribute('data-target');
+        var fila = document.getElementById('fila-' + targetId);
+        var abierta = fila.style.display !== 'none';
+        fila.style.display = abierta ? 'none' : 'table-row';
+        btn.textContent = abierta ? btn.textContent.replace('Ocultar', 'Ver') : btn.textContent.replace('Ver', 'Ocultar');
+    });
+});
+</script>
 {% endblock %}

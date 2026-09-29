@@ -1,5 +1,5 @@
 ﻿import requests
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, Response, abort
 from config import Config
 from utilities.decorators import login_required, admin_required, roles_required
 
@@ -525,6 +525,28 @@ def mis_reportes():
 
     return render_template("mis_reportes.html", reportes=r.json().get("reportes", []))
 
+
+@app.route("/evidencias/<int:evidencia_id>")
+@login_required
+def ver_evidencia(evidencia_id):
+    """
+    Actua como intermediario: el navegador nunca habla directo con el backend
+    (que exige un token Bearer), sino con esta ruta protegida por la sesion.
+    """
+    try:
+        r = requests.get(BACKEND_URL + f"/api/reportes/evidencias/{evidencia_id}",
+                          headers=_auth_headers(), timeout=10)
+    except requests.exceptions.ConnectionError:
+        abort(502)
+
+    if r.status_code == 403:
+        abort(403)
+    if r.status_code == 404:
+        abort(404)
+    if r.status_code != 200:
+        abort(502)
+
+    return Response(r.content, mimetype=r.headers.get("Content-Type", "application/octet-stream"))
 
 PRIORIDAD_LABELS = {
     "baja": "Baja",
