@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Gestión de emergencias — SIGER{% endblock %}
+{% block content %}
+
+<div class="container">
+  <div class="dash-hero animate-in">
+    <h1 class="dash-title">Gestión de emergencias</h1>
+    <p class="dash-sub">Consulta centralizada de los incidentes registrados para validar, asignar o hacerles seguimiento.</p>
+  </div>
+
+  <form class="adm-filters" method="GET" action="{{ url_for('gestion_emergencias') }}">
+    <div class="adm-field adm-field-grow">
+      <input type="text" name="q" class="adm-input" placeholder="Buscar por código, tipo o dirección..." value="{{ filtros.q }}">
+    </div>
+    <div class="adm-field">
+      <select name="tipo" class="adm-input">
+        <option value="">Todos los tipos</option>
+        {% for t in tipos %}
+        <option value="{{ t }}" {% if filtros.tipo == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="adm-field">
+      <select name="prioridad" class="adm-input">
+        <option value="">Todas las prioridades</option>
+        {% for valor, etiqueta in prioridad_labels.items() %}
+        <option value="{{ valor }}" {% if filtros.prioridad == valor %}selected{% endif %}>{{ etiqueta }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="adm-field">
+      <select name="estado" class="adm-input">
+        <option value="">Todos los estados</option>
+        {% for valor, etiqueta in estado_labels.items() %}
+        <option value="{{ valor }}" {% if filtros.estado == valor %}selected{% endif %}>{{ etiqueta }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="adm-field">
+      <select name="municipio_id" class="adm-input">
+        <option value="">Todos los municipios</option>
+        {% for m in municipios %}
+        <option value="{{ m.id }}" {% if filtros.municipio_id == m.id|string %}selected{% endif %}>{{ m.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn-cta adm-filter-btn">Filtrar</button>
+    {% if filtros.q or filtros.tipo or filtros.prioridad or filtros.estado or filtros.municipio_id %}
+    <a href="{{ url_for('gestion_emergencias') }}" class="adm-clear-link">Limpiar</a>
+    {% endif %}
+  </form>
+
+  <div class="adm-table-wrap animate-in">
+    {% if reportes %}
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Tipo</th>
+          <th>Prioridad</th>
+          <th>Municipio</th>
+          <th>Estado</th>
+          <th>Fecha</th>
+          <th>Afectados</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reportes %}
+        <tr>
+          <td>{{ r.folio }}</td>
+          <td>{{ r.tipo }}</td>
+          <td>
+            {% if r.prioridad in ['critica', 'alta'] %}
+            <span class="adm-badge adm-badge-inactivo">{{ prioridad_labels.get(r.prioridad, r.prioridad)|capitalize }}</span>
+            {% elif r.prioridad == 'media' %}
+            <span class="adm-badge adm-badge-rol">Media</span>
+            {% else %}
+            <span class="adm-badge adm-badge-activo">Baja</span>
+            {% endif %}
+          </td>
+          <td>{{ r.municipio or "—" }}</td>
+          <td>
+            {% if r.estado == 'pendiente' %}
+            <span class="adm-badge adm-badge-inactivo">Pendiente</span>
+            {% else %}
+            <span class="adm-badge adm-badge-activo">{{ estado_labels.get(r.estado, r.estado)|capitalize }}</span>
+            {% endif %}
+          </td>
+          <td>{{ r.fecha_hora[:16].replace('T', ' ') if r.fecha_hora else "—" }}</td>
+          <td>{{ r.afectados }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="adm-empty">No se encontraron emergencias con esos filtros.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

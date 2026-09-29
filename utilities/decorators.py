@@ -25,3 +25,22 @@ def admin_required(view):
             return redirect(url_for("dashboard"))
         return view(*args, **kwargs)
     return wrapped
+
+def roles_required(*roles_permitidos):
+    """
+    Exige sesion iniciada Y que el rol este dentro de los permitidos;
+    si no, redirige al panel.
+    Uso: @roles_required("gestor_municipal", "administrador")
+    """
+    def decorador(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if "usuario" not in session:
+                flash("Debes iniciar sesion primero", "error")
+                return redirect(url_for("login"))
+            if session["usuario"].get("rol") not in roles_permitidos:
+                flash("No tienes permisos para acceder a esa seccion", "error")
+                return redirect(url_for("dashboard"))
+            return view(*args, **kwargs)
+        return wrapped
+    return decorador

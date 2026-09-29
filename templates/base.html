@@ -44,15 +44,18 @@
               <span>Menú</span>
             </button>
             <div class="nav-menu-panel" data-menu-panel role="menu">
-              <a href="{{ url_for('dashboard') }}" class="nav-menu-item {{ 'active' if request.path == url_for('dashboard') }}">Panel</a>
-              <a href="{{ url_for('reportar_emergencia') }}" class="nav-menu-item {{ 'active' if request.path == url_for('reportar_emergencia') }}">Reportar emergencia</a>
-              <a href="{{ url_for('mis_reportes') }}" class="nav-menu-item {{ 'active' if request.path == url_for('mis_reportes') }}">Mis reportes</a>
-              {% if u['rol'] == 'administrador' %}
-              <div class="nav-menu-sep"></div>
-              <a href="{{ url_for('admin_usuarios') }}" class="nav-menu-item {{ 'active' if request.path == url_for('admin_usuarios') }}">Usuarios</a>
-              <a href="{{ url_for('admin_municipios') }}" class="nav-menu-item {{ 'active' if request.path == url_for('admin_municipios') }}">Municipios</a>
-              <a href="{{ url_for('admin_organismos') }}" class="nav-menu-item {{ 'active' if request.path == url_for('admin_organismos') }}">Organismos</a>
-              {% endif %}
+                <a href="{{ url_for('dashboard') }}" class="nav-menu-item {{ 'active' if request.path == url_for('dashboard') }}">Panel</a>
+                <a href="{{ url_for('reportar_emergencia') }}" class="nav-menu-item {{ 'active' if request.path == url_for('reportar_emergencia') }}">Reportar emergencia</a>
+                <a href="{{ url_for('mis_reportes') }}" class="nav-menu-item {{ 'active' if request.path == url_for('mis_reportes') }}">Mis reportes</a>
+                {% if u['rol'] in ['gestor_municipal', 'administrador'] %}
+                <a href="{{ url_for('gestion_emergencias') }}" class="nav-menu-item {{ 'active' if request.path == url_for('gestion_emergencias') }}">Gestión de emergencias</a>
+                {% endif %}
+                {% if u['rol'] == 'administrador' %}
+                <div class="nav-menu-sep"></div>
+                <a href="{{ url_for('admin_usuarios') }}" class="nav-menu-item {{ 'active' if request.path == url_for('admin_usuarios') }}">Usuarios</a>
+                <a href="{{ url_for('admin_municipios') }}" class="nav-menu-item {{ 'active' if request.path == url_for('admin_municipios') }}">Municipios</a>
+                <a href="{{ url_for('admin_organismos') }}" class="nav-menu-item {{ 'active' if request.path == url_for('admin_organismos') }}">Organismos</a>
+                {% endif %}
             </div>
           </div>
 

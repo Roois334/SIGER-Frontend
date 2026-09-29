@@ -1,7 +1,7 @@
 ﻿import requests
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from config import Config
-from utilities.decorators import login_required, admin_required
+from utilities.decorators import login_required, admin_required, roles_required
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -526,6 +526,50 @@ def mis_reportes():
     return render_template("mis_reportes.html", reportes=r.json().get("reportes", []))
 
 
+PRIORIDAD_LABELS = {
+    "baja": "Baja",
+    "media": "Media",
+    "alta": "Alta",
+    "critica": "Critica",
+}
+
+ESTADO_LABELS = {
+    "pendiente": "Pendiente",
+}
+
+
+@app.route("/gestion/emergencias")
+@roles_required("gestor_municipal", "administrador")
+def gestion_emergencias():
+    filtros = {
+        "q": request.args.get("q", "").strip(),
+        "tipo": request.args.get("tipo", ""),
+        "estado": request.args.get("estado", ""),
+        "prioridad": request.args.get("prioridad", ""),
+        "municipio_id": request.args.get("municipio_id", ""),
+    }
+    params = {k: v for k, v in filtros.items() if v}
+
+    try:
+        r_rep = requests.get(BACKEND_URL + "/api/reportes/gestion", headers=_auth_headers(), params=params, timeout=5)
+        r_mun = requests.get(BACKEND_URL + "/api/municipios/activos", headers=_auth_headers(), timeout=5)
+    except requests.exceptions.ConnectionError:
+        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        return render_template("gestion_emergencias.html", reportes=[], municipios=[],
+                                tipos=TIPOS_EMERGENCIA, filtros=filtros,
+                                prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
+
+    if r_rep.status_code != 200:
+        flash(r_rep.json().get("error", "No se pudo cargar el listado de emergencias"), "error")
+        return render_template("gestion_emergencias.html", reportes=[], municipios=[],
+                                tipos=TIPOS_EMERGENCIA, filtros=filtros,
+                                prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
+
+    reportes = r_rep.json().get("reportes", [])
+    municipios = r_mun.json().get("municipios", []) if r_mun.status_code == 200 else []
+    return render_template("gestion_emergencias.html", reportes=reportes, municipios=municipios,
+                            tipos=TIPOS_EMERGENCIA, filtros=filtros,
+                            prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
 @app.route("/logout")
 def logout():
     session.clear()
