@@ -1,4 +1,5 @@
-﻿import requests
+﻿import os
+import requests
 from flask import Flask, render_template, request, redirect, url_for, session, flash, Response, abort
 from config import Config
 from utilities.decorators import login_required, admin_required, roles_required
@@ -6,7 +7,7 @@ from utilities.decorators import login_required, admin_required, roles_required
 app = Flask(__name__)
 app.config.from_object(Config)
 
-BACKEND_URL = "http://127.0.0.1:5000"
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:5000")
 
 MUNICIPIOS_SABANA_OCCIDENTE = [
     "Facatativa", "Madrid", "Mosquera", "Funza", "Bojaca",

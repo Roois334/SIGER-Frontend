@@ -36,7 +36,7 @@
                         <select name="tipo" id="campo-tipo" class="lfi" required>
                             <option value="">Selecciona un tipo...</option>
                             {% for t in tipos %}
-                            <option value="{{ t }}" {% if form_data and form_data.tipo= =t %}selected{% endif %}>{{ t }}</option>
+                            <option value="{{ t }}" {% if form_data and form_data.tipo == t %}selected{% endif %}>{{ t }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -49,7 +49,7 @@
                         <select name="municipio_id" id="campo-municipio" class="lfi" required>
                             <option value="">Selecciona un municipio...</option>
                             {% for m in municipios %}
-                            <option value="{{ m.id }}" {% if form_data and form_data.municipio_id= =m.id|string %}selected{% endif %}>{{ m.nombre }}</option>
+                            <option value="{{ m.id }}" {% if form_data and form_data.municipio_id == m.id|string %}selected{% endif %}>{{ m.nombre }}</option>
                             {% endfor %}
                         </select>
                     </div>
