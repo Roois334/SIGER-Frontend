@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Mis reportes — SIGER{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+{% endblock %}
+
 {% block content %}
 
 <div class="container">
@@ -36,7 +41,15 @@
                         <span class="adm-badge adm-badge-activo">{{ r.estado|capitalize }}</span>
                         {% endif %}
                     </td>
-                    <td>{{ r.evidencias|length }}</td>
+                    <td>
+                        {% if r.evidencias %}
+                        <button type="button" class="adm-btn adm-btn-edit btn-ver-evidencias" data-target="evid-{{ r.id }}">
+                            Ver evidencias ({{ r.evidencias|length }})
+                        </button>
+                        {% else %}
+                        Sin evidencias
+                        {% endif %}
+                    </td>
                     <td>
                         {% if r.latitud and r.longitud %}
                         <button type="button" class="adm-btn adm-btn-edit btn-ver-mapa"
@@ -48,6 +61,20 @@
                         {% endif %}
                     </td>
                 </tr>
+                {% if r.evidencias %}
+                <tr id="fila-evid-{{ r.id }}" style="display:none;">
+                    <td colspan="7">
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                            {% for e in r.evidencias %}
+                            <a href="{{ url_for('ver_evidencia', evidencia_id=e.id) }}" target="_blank"
+                               class="adm-btn adm-btn-edit" style="text-decoration:none;">
+                                {{ e.nombre_archivo }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
                 {% if r.latitud and r.longitud %}
                 <tr id="fila-mapa-{{ r.id }}" style="display:none;">
                     <td colspan="7">
@@ -56,6 +83,11 @@
                 </tr>
                 {% endif %}
                 {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="adm-empty">Todavía no has registrado ninguna emergencia.</div>
+        {% endif %}
     </div>
 
     <div style="margin-top:16px;">
@@ -63,8 +95,6 @@
     </div>
 </div>
 
-{% block extra_head %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 {% endblock %}
 
 {% block extra_scripts %}
@@ -72,25 +102,37 @@
 <script>
 var mapasIniciados = {};
 document.querySelectorAll('.btn-ver-mapa').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        var targetId = btn.getAttribute('data-target');
-        var fila = document.getElementById('fila-' + targetId);
-        var abierta = fila.style.display !== 'none';
+        btn.addEventListener('click', function () {
+            var targetId = btn.getAttribute('data-target');
+            var fila = document.getElementById('fila-' + targetId);
+            var abierta = fila.style.display !== 'none';
 
-        fila.style.display = abierta ? 'none' : 'table-row';
-        btn.textContent = abierta ? 'Ver mapa' : 'Ocultar mapa';
+            fila.style.display = abierta ? 'none' : 'table-row';
+            btn.textContent = abierta ? 'Ver mapa' : 'Ocultar mapa';
 
-        if (!abierta && !mapasIniciados[targetId]) {
-            var lat = parseFloat(btn.getAttribute('data-lat'));
-            var lon = parseFloat(btn.getAttribute('data-lon'));
-            var mapa = L.map(targetId, { scrollWheelZoom: false }).setView([lat, lon], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
-            }).addTo(mapa);
-            L.marker([lat, lon]).addTo(mapa);
-            mapasIniciados[targetId] = true;
-        }
-    });
+            if (!abierta && !mapasIniciados[targetId]) {
+                var lat = parseFloat(btn.getAttribute('data-lat'));
+                var lon = parseFloat(btn.getAttribute('data-lon'));
+                var mapa = L.map(targetId, { scrollWheelZoom: false }).setView([lat, lon], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+                }).addTo(mapa);
+                L.marker([lat, lon]).addTo(mapa);
+                mapasIniciados[targetId] = true;
+            }
+        });
+});
+
+document.querySelectorAll('.btn-ver-evidencias').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var targetId = btn.getAttribute('data-target');
+            var fila = document.getElementById('fila-' + targetId);
+            var abierta = fila.style.display !== 'none';
+            var textoBase = btn.textContent.replace('Ocultar', 'Ver');
+
+            fila.style.display = abierta ? 'none' : 'table-row';
+            btn.textContent = abierta ? textoBase.replace('Ver', 'Ver') : textoBase.replace('Ver', 'Ocultar');
+        });
 });
 </script>
 {% endblock %}

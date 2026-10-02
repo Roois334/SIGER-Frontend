@@ -1,9 +1,24 @@
 {% extends "base.html" %}
 {% block title %}Reportar emergencia — SIGER{% endblock %}
-{% block content %}
+
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<style>
+    .error-msg {
+        display: block;
+        color: #dc2626;
+        font-size: 0.8rem;
+        margin-top: 4px;
+        min-height: 1em;
+    }
+
+    .campo-invalido {
+        border-color: #dc2626 !important;
+    }
+</style>
 {% endblock %}
+
+{% block content %}
 
 <div class="container">
     <div class="dash-hero animate-in">
@@ -13,6 +28,34 @@
 
     <div class="adm-table-wrap animate-in" style="padding:24px;max-width:760px;">
         <form method="POST" action="{{ url_for('reportar_emergencia') }}" enctype="multipart/form-data">
+
+            <div style="display:flex;gap:14px;flex-wrap:wrap;">
+                <div class="lfg" style="flex:1 1 240px;">
+                    <label class="lfl">Tipo de emergencia *</label>
+                    <div class="liw">
+                        <select name="tipo" id="campo-tipo" class="lfi" required>
+                            <option value="">Selecciona un tipo...</option>
+                            {% for t in tipos %}
+                            <option value="{{ t }}" {% if form_data and form_data.tipo == t %}selected{% endif %}>{{ t }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <span class="error-msg" id="error-tipo"></span>
+                </div>
+
+                <div class="lfg" style="flex:1 1 200px;">
+                    <label class="lfl">Municipio *</label>
+                    <div class="liw">
+                        <select name="municipio_id" id="campo-municipio" class="lfi" required>
+                            <option value="">Selecciona un municipio...</option>
+                            {% for m in municipios %}
+                            <option value="{{ m.id }}" {% if form_data and form_data.municipio_id == m.id|string %}selected{% endif %}>{{ m.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <span class="error-msg" id="error-municipio"></span>
+                </div>
+            </div>
 
             <div class="lfg">
                 <label class="lfl">Ubica el punto exacto en el mapa</label>
@@ -41,79 +84,52 @@
                 <button type="button" id="btn-ubicacion" class="adm-btn adm-btn-edit">Usar mi ubicación actual</button>
             </div>
 
-            <div class="lfg" style="flex:1 1 200px;">
-                <label class="lfl">Municipio *</label>
+            <div class="lfg">
+                <label class="lfl">Dirección o punto de referencia *</label>
                 <div class="liw">
-                    <select name="municipio_id" class="lfi" required>
-                        <option value="">Selecciona un municipio...</option>
-                        {% for m in municipios %}
-                        <option value="{{ m.id }}" {% if form_data and form_data.municipio_id==m.id|string %}selected{% endif %}>{{ m.nombre }}</option>
-                        {% endfor %}
-                    </select>
+                    <input type="text" name="direccion" id="campo-direccion" class="lfi" style="padding-left:13px" required maxlength="200"
+                           placeholder="Ej: Calle 10 # 5-20, barrio El Rosal"
+                           value="{{ form_data.direccion if form_data else '' }}">
+                </div>
+                <span class="error-msg" id="error-direccion"></span>
+            </div>
+
+            <div class="lfg">
+                <label class="lfl">Descripción del incidente *</label>
+                <div class="liw">
+                    <textarea name="descripcion" id="campo-descripcion" class="lfi" style="padding:13px;min-height:120px;resize:vertical;" required
+                              minlength="15" maxlength="2000"
+                              placeholder="Describe qué ocurrió, cuándo empezó y cualquier detalle relevante (mínimo 15 caracteres)">{{ form_data.descripcion if form_data else '' }}</textarea>
+                </div>
+                <span class="error-msg" id="error-descripcion"></span>
+            </div>
+
+            <div class="lfg" style="max-width:200px;">
+                <label class="lfl">Personas afectadas (aprox.)</label>
+                <div class="liw">
+                    <input type="number" name="afectados" class="lfi" style="padding-left:13px" min="0" value="{{ form_data.afectados if form_data else 0 }}">
                 </div>
             </div>
-    </div>
 
-    <div class="lfg">
-        <label class="lfl">Dirección o punto de referencia *</label>
-        <div class="liw">
-            <input type="text" name="direccion" class="lfi" style="padding-left:13px" required maxlength="200"
-                   placeholder="Ej: Calle 10 # 5-20, barrio El Rosal"
-                   value="{{ form_data.direccion if form_data else '' }}">
-        </div>
-    </div>
-
-    <div style="display:flex;gap:14px;flex-wrap:wrap;">
-        <div class="lfg" style="flex:1 1 200px;">
-            <label class="lfl">Latitud (opcional)</label>
-            <div class="liw">
-                <input type="text" name="latitud" id="latitud" class="lfi" style="padding-left:13px" placeholder="Ej: 4.8140" value="{{ form_data.latitud if form_data else '' }}">
+            <div class="lfg">
+                <label class="lfl">Evidencias (fotos, video o PDF — opcional, máx. 5 archivos)</label>
+                <div class="liw">
+                    <input type="file" name="evidencias" class="lfi" style="padding:10px 13px" multiple
+                           accept="image/*,video/mp4,application/pdf">
+                </div>
             </div>
-        </div>
-        <div class="lfg" style="flex:1 1 200px;">
-            <label class="lfl">Longitud (opcional)</label>
-            <div class="liw">
-                <input type="text" name="longitud" id="longitud" class="lfi" style="padding-left:13px" placeholder="Ej: -74.3480" value="{{ form_data.longitud if form_data else '' }}">
-            </div>
-        </div>
-        <div style="display:flex;align-items:flex-end;margin-bottom:14px;">
-            <button type="button" id="btn-ubicacion" class="adm-btn adm-btn-edit">Usar mi ubicación actual</button>
-        </div>
-    </div>
 
-    <div class="lfg">
-        <label class="lfl">Descripción del incidente *</label>
-        <div class="liw">
-            <textarea name="descripcion" class="lfi" style="padding:13px;min-height:120px;resize:vertical;" required
-                      minlength="15" maxlength="2000"
-                      placeholder="Describe qué ocurrió, cuándo empezó y cualquier detalle relevante (mínimo 15 caracteres)">{{ form_data.descripcion if form_data else '' }}</textarea>
-        </div>
+            <button type="submit" class="btn-cta adm-filter-btn" style="margin-top:10px;">Enviar reporte</button>
+        </form>
     </div>
-
-    <div class="lfg" style="max-width:200px;">
-        <label class="lfl">Personas afectadas (aprox.)</label>
-        <div class="liw">
-            <input type="number" name="afectados" class="lfi" style="padding-left:13px" min="0" value="{{ form_data.afectados if form_data else 0 }}">
-        </div>
-    </div>
-
-    <div class="lfg">
-        <label class="lfl">Evidencias (fotos, video o PDF — opcional, máx. 5 archivos)</label>
-        <div class="liw">
-            <input type="file" name="evidencias" class="lfi" style="padding:10px 13px" multiple
-                   accept="image/*,video/mp4,application/pdf">
-        </div>
-    </div>
-
-    <button type="submit" class="btn-cta adm-filter-btn" style="margin-top:10px;">Enviar reporte</button>
-    </form>
 </div>
-</div>
+
+{% endblock %}
 
 {% block extra_scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
-    (function () {
+(function () {
         var latInput = document.getElementById('latitud');
         var lonInput = document.getElementById('longitud');
 
@@ -154,12 +170,10 @@
             ubicarMarcador(parseFloat(latInput.value), parseFloat(lonInput.value));
         }
 
-        // Clic en el mapa = seleccionar ubicación manualmente
         mapa.on('click', function (e) {
             actualizarCoordenadas(e.latlng.lat, e.latlng.lng);
         });
 
-        // Botón de geolocalización del navegador
         document.getElementById('btn-ubicacion').addEventListener('click', function () {
             if (!navigator.geolocation) {
                 alert('Tu navegador no soporta geolocalización.');
@@ -171,8 +185,78 @@
                 alert('No se pudo obtener tu ubicación. Selecciónala manualmente en el mapa.');
             });
         });
-    })();
+})();
 </script>
-{% endblock %}
 
+<script>
+(function () {
+        var form = document.querySelector('form[method="POST"]');
+
+        var reglas = [
+            { campo: "campo-tipo", error: "error-tipo", mensaje: "Selecciona un tipo de emergencia" },
+            { campo: "campo-municipio", error: "error-municipio", mensaje: "Selecciona un municipio" },
+            { campo: "campo-direccion", error: "error-direccion", mensaje: "La direccion es obligatoria" },
+            { campo: "campo-descripcion", error: "error-descripcion", mensaje: "La descripcion debe tener al menos 15 caracteres", minLength: 15 },
+        ];
+
+        function limpiarError(regla) {
+            var campo = document.getElementById(regla.campo);
+            var error = document.getElementById(regla.error);
+            if (campo) campo.classList.remove('campo-invalido');
+            if (error) error.textContent = '';
+        }
+
+        function mostrarError(regla) {
+            var campo = document.getElementById(regla.campo);
+            var error = document.getElementById(regla.error);
+            if (campo) campo.classList.add('campo-invalido');
+            if (error) error.textContent = regla.mensaje;
+        }
+
+        function validarCampo(regla) {
+            var campo = document.getElementById(regla.campo);
+            if (!campo) return true;
+
+            var valor = campo.value.trim();
+            var valido = valor.length > 0;
+            if (valido && regla.minLength) {
+                valido = valor.length >= regla.minLength;
+            }
+
+            if (valido) {
+                limpiarError(regla);
+            } else {
+                mostrarError(regla);
+            }
+            return valido;
+        }
+
+        reglas.forEach(function (regla) {
+            var campo = document.getElementById(regla.campo);
+            if (campo) {
+                campo.addEventListener('input', function () { validarCampo(regla); });
+                campo.addEventListener('change', function () { validarCampo(regla); });
+            }
+        });
+
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                var todoValido = true;
+                reglas.forEach(function (regla) {
+                    if (!validarCampo(regla)) {
+                        todoValido = false;
+                    }
+                });
+
+                if (!todoValido) {
+                    e.preventDefault();
+                    var primerError = document.querySelector('.campo-invalido');
+                    if (primerError) {
+                        primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
+        }
+})();
+</script>
 {% endblock %}
