@@ -50,12 +50,17 @@
       <div class="lfg">
         <label class="lfl">Rol</label>
         <div class="liw">
-          <select name="rol" class="lfi" style="padding-left:13px" required>
+          <select name="rol" class="lfi" style="padding-left:13px" required {% if es_mi_cuenta %}disabled title="No puedes cambiar tu propio rol"{% endif %}>
             {% for valor, etiqueta in role_labels.items() %}
             <option value="{{ valor }}" {% if usuario.rol == valor %}selected{% endif %}>{{ etiqueta }}</option>
             {% endfor %}
           </select>
         </div>
+        {% if es_mi_cuenta %}
+        <small class="lsub">No puedes cambiar tu propio rol.</small>
+        {% else %}
+        <small class="lsub">Gestor municipal y Organismo de atención requieren un municipio asignado.</small>
+        {% endif %}
       </div>
 
       <button type="submit" class="lbtn">Guardar cambios</button>

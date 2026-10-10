@@ -1,262 +1,555 @@
 {% extends "base.html" %}
+{% from "_iconos.html" import icono_tipo %}
 {% block title %}Reportar emergencia — SIGER{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-<style>
-    .error-msg {
-        display: block;
-        color: #dc2626;
-        font-size: 0.8rem;
-        margin-top: 4px;
-        min-height: 1em;
-    }
-
-    .campo-invalido {
-        border-color: #dc2626 !important;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
+{% set municipio_sel = (form_data.municipio_id if form_data else municipio_sugerido) %}
 
 <div class="container">
-    <div class="dash-hero animate-in">
-        <h1 class="dash-title">Reportar una emergencia</h1>
-        <p class="dash-sub">Cuéntanos qué está pasando. Entre más completa sea la información, más rápido podrá actuar el organismo correspondiente.</p>
+  <div class="dash-hero animate-in">
+    <div class="pg-crumbs"><a href="{{ url_for('dashboard') }}">Panel</a><span>/</span><span>Reportar emergencia</span></div>
+    <h1 class="dash-title">Reportar una emergencia</h1>
+    <p class="dash-sub">Cuéntanos qué está pasando. Entre más completa sea la información, más rápido podrá actuar el organismo correspondiente.</p>
+  </div>
+
+  <div class="rep-progress animate-in" id="rep-progress" aria-label="Progreso del formulario">
+    {% for clave, texto in [('tipo','Tipo'),('ubicacion','Ubicación'),('detalles','Detalles'),('evidencias','Evidencias')] %}
+    <div class="rep-step" data-step="{{ clave }}">
+      <span class="rep-step-n"><span>{{ loop.index }}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+      {{ texto }}
+    </div>
+    {% endfor %}
+  </div>
+
+  <form id="form-reporte" class="rep-layout" method="POST" action="{{ url_for('reportar_emergencia') }}" enctype="multipart/form-data" novalidate>
+    <div class="rep-main">
+
+      <!-- 1 · TIPO -->
+      <section class="rep-card animate-in" id="sec-tipo">
+        <div class="rep-card-head">
+          <div class="rep-num">1</div>
+          <div><h2>¿Qué está pasando?</h2><p>Selecciona el tipo de emergencia. La prioridad se asigna automáticamente.</p></div>
+        </div>
+        <div class="rep-tipos" role="radiogroup" aria-label="Tipo de emergencia">
+          {% for t in config.tipos %}
+          <label class="rep-tipo">
+            <input type="radio" name="tipo" value="{{ t.nombre }}" data-prioridad="{{ t.prioridad }}" {% if form_data and form_data.tipo == t.nombre %}checked{% endif %}>
+            <span class="rep-tipo-box">
+              <span class="rep-tipo-ico">{{ icono_tipo(t.nombre, 24) }}</span>
+              <span class="rep-tipo-nombre">{{ t.nombre|tipo_bonito }}</span>
+              <span class="pill pill-{{ t.prioridad }}" style="align-self:flex-start;">{{ prioridad_labels.get(t.prioridad, t.prioridad) }}</span>
+            </span>
+            <span class="rep-tipo-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          </label>
+          {% endfor %}
+        </div>
+        <span class="rep-error" id="error-tipo"></span>
+      </section>
+
+      <!-- 2 · UBICACION -->
+      <section class="rep-card animate-in" id="sec-ubicacion">
+        <div class="rep-card-head">
+          <div class="rep-num">2</div>
+          <div><h2>¿Dónde ocurre?</h2><p>Elige el municipio y marca el punto exacto en el mapa.</p></div>
+        </div>
+
+        <div class="rep-field">
+          <label class="rep-label" for="campo-municipio">Municipio *</label>
+          <select name="municipio_id" id="campo-municipio" class="rep-input">
+            <option value="">Selecciona un municipio…</option>
+            {% for m in municipios %}
+            <option value="{{ m.id }}" {% if municipio_sel|string == m.id|string %}selected{% endif %}>{{ m.nombre }}</option>
+            {% endfor %}
+          </select>
+          <span class="rep-error" id="error-municipio"></span>
+        </div>
+
+        <div class="rep-field">
+          <label class="rep-label">Punto exacto en el mapa <small></small></label>
+          <div id="mapa-reporte" class="rep-map"></div>
+          <div class="rep-map-tools">
+            <button type="button" id="btn-ubicacion" class="rep-btn-ghost">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+              Usar mi ubicación actual
+            </button>
+            <button type="button" id="btn-quitar-pin" class="rep-btn-ghost" style="display:none;">Quitar marcador</button>
+            <span class="rep-coord" id="chip-coords">Sin marcar</span>
+          </div>
+          <input type="hidden" name="latitud" id="latitud" value="{{ form_data.latitud if form_data else '' }}">
+          <input type="hidden" name="longitud" id="longitud" value="{{ form_data.longitud if form_data else '' }}">
+          <p class="rep-hint">Haz clic en el mapa para marcar el lugar, arrastra el marcador para ajustarlo o usa tu ubicación actual.</p>
+          <span class="rep-error" id="error-mapa"></span>
+        </div>
+
+        <div class="rep-field">
+          <label class="rep-label" for="campo-direccion">Dirección o punto de referencia *</label>
+          <input type="text" name="direccion" id="campo-direccion" class="rep-input" maxlength="{{ config.limites.max_direccion }}"
+                 placeholder="Ej: Calle 10 # 5-20, barrio El Rosal, frente a la panadería"
+                 value="{{ form_data.direccion if form_data else '' }}" autocomplete="off">
+          <p class="rep-hint" id="hint-direccion"></p>
+          <span class="rep-error" id="error-direccion"></span>
+        </div>
+      </section>
+
+      <!-- 3 · DETALLES -->
+      <section class="rep-card animate-in" id="sec-detalles">
+        <div class="rep-card-head">
+          <div class="rep-num">3</div>
+          <div><h2>Cuéntanos qué ocurrió</h2><p>Describe la situación y cuántas personas podrían estar afectadas.</p></div>
+        </div>
+
+        <div class="rep-field">
+          <label class="rep-label" for="campo-descripcion">Descripción del incidente * <span class="rep-counter" id="contador-desc">0 / {{ config.limites.max_descripcion }}</span></label>
+          <textarea name="descripcion" id="campo-descripcion" class="rep-input" maxlength="{{ config.limites.max_descripcion }}"
+                    placeholder="¿Qué pasó? ¿Cuándo empezó? ¿Hay heridos, riesgo de propagación o vías bloqueadas? (mínimo {{ config.limites.min_descripcion }} caracteres)">{{ form_data.descripcion if form_data else '' }}</textarea>
+          <span class="rep-error" id="error-descripcion"></span>
+        </div>
+
+        <div class="rep-field">
+          <label class="rep-label" for="campo-afectados">Personas afectadas <small>(aproximado)</small></label>
+          <div class="rep-number">
+            <button type="button" data-delta="-1" aria-label="Menos">−</button>
+            <input type="number" name="afectados" id="campo-afectados" min="0" max="{{ config.limites.max_afectados }}" value="{{ form_data.afectados if form_data else 0 }}" inputmode="numeric">
+            <button type="button" data-delta="1" aria-label="Más">+</button>
+          </div>
+          <span class="rep-error" id="error-afectados"></span>
+        </div>
+      </section>
+
+      <!-- 4 · EVIDENCIAS -->
+      <section class="rep-card animate-in" id="sec-evidencias">
+        <div class="rep-card-head">
+          <div class="rep-num">4</div>
+          <div><h2>Evidencias <span style="font-weight:500;color:var(--gs);font-size:.85rem;">(opcional)</span></h2>
+            <p>Fotos, video o PDF. Máximo {{ config.limites.max_evidencias }} archivos de {{ config.limites.max_mb }} MB cada uno.</p></div>
+        </div>
+
+        <label class="rep-drop" id="zona-evidencias" tabindex="0">
+          <span class="rep-drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
+          <strong>Arrastra los archivos aquí o haz clic para elegirlos</strong>
+          <span>PNG, JPG, GIF, MP4 o PDF · <b id="ev-count">0</b> / {{ config.limites.max_evidencias }} adjuntos</span>
+          <input type="file" name="evidencias" id="campo-evidencias" multiple accept="image/png,image/jpeg,image/gif,video/mp4,application/pdf">
+        </label>
+        <div class="rep-files" id="lista-evidencias"></div>
+        <span class="rep-error" id="error-evidencias"></span>
+        {% if form_data %}
+        <p class="rep-hint">Por seguridad el navegador no conserva los archivos tras un error: vuelve a adjuntarlos si los tenías.</p>
+        {% endif %}
+      </section>
     </div>
 
-    <div class="adm-table-wrap animate-in" style="padding:24px;max-width:760px;">
-        <form method="POST" action="{{ url_for('reportar_emergencia') }}" enctype="multipart/form-data">
+    <!-- RESUMEN -->
+    <aside class="rep-side">
+      <div class="rep-summary animate-in">
+        <h3>Resumen de tu reporte</h3>
+        <p>Completa los campos obligatorios para poder enviarlo.</p>
 
-            <div style="display:flex;gap:14px;flex-wrap:wrap;">
-                <div class="lfg" style="flex:1 1 240px;">
-                    <label class="lfl">Tipo de emergencia *</label>
-                    <div class="liw">
-                        <select name="tipo" id="campo-tipo" class="lfi" required>
-                            <option value="">Selecciona un tipo...</option>
-                            {% for t in tipos %}
-                            <option value="{{ t }}" {% if form_data and form_data.tipo == t %}selected{% endif %}>{{ t }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <span class="error-msg" id="error-tipo"></span>
-                </div>
+        <div class="rep-bar"><i id="barra-progreso"></i></div>
+        <div class="rep-bar-txt"><span id="txt-progreso">0 de 4 obligatorios</span><span id="txt-prioridad"></span></div>
 
-                <div class="lfg" style="flex:1 1 200px;">
-                    <label class="lfl">Municipio *</label>
-                    <div class="liw">
-                        <select name="municipio_id" id="campo-municipio" class="lfi" required>
-                            <option value="">Selecciona un municipio...</option>
-                            {% for m in municipios %}
-                            <option value="{{ m.id }}" {% if form_data and form_data.municipio_id == m.id|string %}selected{% endif %}>{{ m.nombre }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <span class="error-msg" id="error-municipio"></span>
-                </div>
-            </div>
+        <ul class="rep-checks">
+          <li data-check="tipo"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></i><span><b>Tipo de emergencia</b><small data-val="tipo">Sin seleccionar</small></span></li>
+          <li data-check="municipio"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></i><span><b>Municipio</b><small data-val="municipio">Sin seleccionar</small></span></li>
+          <li data-check="direccion"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></i><span><b>Dirección</b><small data-val="direccion">Pendiente</small></span></li>
+          <li data-check="descripcion"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></i><span><b>Descripción</b><small data-val="descripcion">Pendiente</small></span></li>
+          <li data-check="mapa"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></i><span><b>Punto en el mapa <em style="font-style:normal;font-weight:500;">(opcional)</em></b><small data-val="mapa">Sin marcar</small></span></li>
+          <li data-check="evidencias"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></i><span><b>Evidencias <em style="font-style:normal;font-weight:500;">(opcional)</em></b><small data-val="evidencias">Ninguna</small></span></li>
+        </ul>
 
-            <div class="lfg">
-                <label class="lfl">Ubica el punto exacto en el mapa</label>
-                <div id="mapa-reporte" style="height:320px;border-radius:14px;overflow:hidden;border:1px solid var(--borde);"></div>
-                <p style="font-size:.78rem;color:var(--gs);margin-top:6px;">
-                    Haz clic en el mapa para marcar el lugar de la emergencia (puedes arrastrar el marcador para ajustarlo),
-                    o usa el botón para ubicarte automáticamente.
-                </p>
-            </div>
+        <button type="submit" class="rep-submit" id="btn-enviar">
+          <span class="rep-spin"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <span id="txt-enviar">Enviar reporte</span>
+        </button>
+      </div>
 
-            <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
-                <div class="lfg" style="flex:1 1 200px;margin-bottom:0;">
-                    <label class="lfl">Latitud</label>
-                    <div class="liw">
-                        <input type="text" name="latitud" id="latitud" class="lfi" style="padding-left:13px" readonly
-                               value="{{ form_data.latitud if form_data else '' }}">
-                    </div>
-                </div>
-                <div class="lfg" style="flex:1 1 200px;margin-bottom:0;">
-                    <label class="lfl">Longitud</label>
-                    <div class="liw">
-                        <input type="text" name="longitud" id="longitud" class="lfi" style="padding-left:13px" readonly
-                               value="{{ form_data.longitud if form_data else '' }}">
-                    </div>
-                </div>
-                <button type="button" id="btn-ubicacion" class="adm-btn adm-btn-edit">Usar mi ubicación actual</button>
-            </div>
-
-            <div class="lfg">
-                <label class="lfl">Dirección o punto de referencia *</label>
-                <div class="liw">
-                    <input type="text" name="direccion" id="campo-direccion" class="lfi" style="padding-left:13px" required maxlength="200"
-                           placeholder="Ej: Calle 10 # 5-20, barrio El Rosal"
-                           value="{{ form_data.direccion if form_data else '' }}">
-                </div>
-                <span class="error-msg" id="error-direccion"></span>
-            </div>
-
-            <div class="lfg">
-                <label class="lfl">Descripción del incidente *</label>
-                <div class="liw">
-                    <textarea name="descripcion" id="campo-descripcion" class="lfi" style="padding:13px;min-height:120px;resize:vertical;" required
-                              minlength="15" maxlength="2000"
-                              placeholder="Describe qué ocurrió, cuándo empezó y cualquier detalle relevante (mínimo 15 caracteres)">{{ form_data.descripcion if form_data else '' }}</textarea>
-                </div>
-                <span class="error-msg" id="error-descripcion"></span>
-            </div>
-
-            <div class="lfg" style="max-width:200px;">
-                <label class="lfl">Personas afectadas (aprox.)</label>
-                <div class="liw">
-                    <input type="number" name="afectados" class="lfi" style="padding-left:13px" min="0" value="{{ form_data.afectados if form_data else 0 }}">
-                </div>
-            </div>
-
-            <div class="lfg">
-                <label class="lfl">Evidencias (fotos, video o PDF — opcional, máx. 5 archivos)</label>
-                <div class="liw">
-                    <input type="file" name="evidencias" class="lfi" style="padding:10px 13px" multiple
-                           accept="image/*,video/mp4,application/pdf">
-                </div>
-            </div>
-
-            <button type="submit" class="btn-cta adm-filter-btn" style="margin-top:10px;">Enviar reporte</button>
-        </form>
-    </div>
+      <div class="rep-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div><b>¿Hay peligro inmediato para la vida?</b> Llama primero a la línea de emergencias <b>123</b>. Este formulario registra el incidente para su gestión, no reemplaza la atención urgente.</div>
+      </div>
+    </aside>
+  </form>
 </div>
 
+<script type="application/json" id="cfg-reporte">{{ {"tipos": config.tipos, "limites": config.limites, "extensiones": config.extensiones, "region": config.region, "prioridades": prioridad_labels}|tojson }}</script>
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
 (function () {
-        var latInput = document.getElementById('latitud');
-        var lonInput = document.getElementById('longitud');
+  "use strict";
 
-        // Centro por defecto: Facatativá (Sabana de Occidente)
-        var latInicial = parseFloat(latInput.value) || 4.8143;
-        var lonInicial = parseFloat(lonInput.value) || -74.3477;
-        var zoomInicial = (latInput.value && lonInput.value) ? 16 : 11;
+  var CFG = JSON.parse(document.getElementById("cfg-reporte").textContent);
+  var LIM = CFG.limites;
+  var $ = function (id) { return document.getElementById(id); };
+  var norm = function (s) { return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim(); };
 
-        var mapa = L.map('mapa-reporte').setView([latInicial, lonInicial], zoomInicial);
+  var form = $("form-reporte");
+  var campoMuni = $("campo-municipio");
+  var campoDir = $("campo-direccion");
+  var campoDesc = $("campo-descripcion");
+  var campoAfect = $("campo-afectados");
+  var latInput = $("latitud");
+  var lonInput = $("longitud");
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(mapa);
+  /* ------------------------------------------------------------ errores */
+  var temporizadorMapa = null;
+  function errorMapa(mensaje) {
+    setError("mapa", mensaje);
+    clearTimeout(temporizadorMapa);
+    if (mensaje) temporizadorMapa = setTimeout(function () { setError("mapa", ""); }, 6000);
+  }
+  function setError(id, mensaje, campo) {
+    var el = $("error-" + id);
+    if (el) el.textContent = mensaje || "";
+    if (campo) campo.classList.toggle("is-invalid", !!mensaje);
+  }
 
-        var marcador = null;
+  /* ------------------------------------------------------------ tipo */
+  function tipoSeleccionado() { return form.querySelector('input[name="tipo"]:checked'); }
 
-        function ubicarMarcador(lat, lon) {
-            if (marcador) {
-                marcador.setLatLng([lat, lon]);
-            } else {
-                marcador = L.marker([lat, lon], { draggable: true }).addTo(mapa);
-                marcador.on('dragend', function () {
-                    var pos = marcador.getLatLng();
-                    actualizarCoordenadas(pos.lat, pos.lng);
-                });
-            }
-            mapa.setView([lat, lon], Math.max(mapa.getZoom(), 15));
-        }
+  /* ------------------------------------------------------------ mapa */
+  var CENTROS = {
+    "facatativa": [4.8143, -74.3547], "madrid": [4.7329, -74.2644], "mosquera": [4.7059, -74.2302],
+    "funza": [4.7160, -74.2113], "bojaca": [4.7357, -74.3416], "el rosal": [4.8517, -74.2630],
+    "subachoque": [4.9293, -74.1738], "zipacon": [4.7647, -74.3796], "tenjo": [4.8705, -74.1443],
+    "cota": [4.8087, -74.1025]
+  };
+  var REG = CFG.region;
+  function dentroDeRegion(lat, lon) {
+    return lat >= REG.lat_min && lat <= REG.lat_max && lon >= REG.lon_min && lon <= REG.lon_max;
+  }
 
-        function actualizarCoordenadas(lat, lon) {
-            latInput.value = lat.toFixed(6);
-            lonInput.value = lon.toFixed(6);
-            ubicarMarcador(lat, lon);
-        }
+  var mapa = null, marcador = null, dirAutomatica = !campoDir.value.trim();
 
-        if (latInput.value && lonInput.value) {
-            ubicarMarcador(parseFloat(latInput.value), parseFloat(lonInput.value));
-        }
+  function textoMunicipio() {
+    var o = campoMuni.options[campoMuni.selectedIndex];
+    return o && o.value ? o.textContent.trim() : "";
+  }
 
-        mapa.on('click', function (e) {
-            actualizarCoordenadas(e.latlng.lat, e.latlng.lng);
+  function actualizarChip() {
+    var chip = $("chip-coords");
+    var tiene = latInput.value && lonInput.value;
+    chip.innerHTML = tiene
+      ? "Lat <b>" + parseFloat(latInput.value).toFixed(5) + "</b> · Lon <b>" + parseFloat(lonInput.value).toFixed(5) + "</b>"
+      : "Sin marcar";
+    $("btn-quitar-pin").style.display = tiene ? "" : "none";
+  }
+
+  function fijarCoordenadas(lat, lon, centrar) {
+    if (!dentroDeRegion(lat, lon)) {
+      errorMapa("Ese punto está fuera de la región de la Sabana de Occidente. Marca un lugar dentro del mapa.");
+      return false;
+    }
+    errorMapa("");
+    latInput.value = lat.toFixed(6);
+    lonInput.value = lon.toFixed(6);
+    if (mapa) {
+      if (marcador) { marcador.setLatLng([lat, lon]); }
+      else {
+        marcador = L.marker([lat, lon], { draggable: true }).addTo(mapa);
+        marcador.on("dragend", function () {
+          var p = marcador.getLatLng();
+          fijarCoordenadas(p.lat, p.lng, false);
+          geocodificar(p.lat, p.lng);
         });
+      }
+      if (centrar) mapa.setView([lat, lon], Math.max(mapa.getZoom(), 16));
+    }
+    actualizarChip();
+    actualizarResumen();
+    return true;
+  }
 
-        document.getElementById('btn-ubicacion').addEventListener('click', function () {
-            if (!navigator.geolocation) {
-                alert('Tu navegador no soporta geolocalización.');
-                return;
-            }
-            navigator.geolocation.getCurrentPosition(function (pos) {
-                actualizarCoordenadas(pos.coords.latitude, pos.coords.longitude);
-            }, function () {
-                alert('No se pudo obtener tu ubicación. Selecciónala manualmente en el mapa.');
-            });
-        });
-})();
-</script>
+  function quitarPin() {
+    latInput.value = ""; lonInput.value = "";
+    if (marcador && mapa) { mapa.removeLayer(marcador); marcador = null; }
+    actualizarChip(); actualizarResumen();
+  }
 
-<script>
-(function () {
-        var form = document.querySelector('form[method="POST"]');
-
-        var reglas = [
-            { campo: "campo-tipo", error: "error-tipo", mensaje: "Selecciona un tipo de emergencia" },
-            { campo: "campo-municipio", error: "error-municipio", mensaje: "Selecciona un municipio" },
-            { campo: "campo-direccion", error: "error-direccion", mensaje: "La direccion es obligatoria" },
-            { campo: "campo-descripcion", error: "error-descripcion", mensaje: "La descripcion debe tener al menos 15 caracteres", minLength: 15 },
-        ];
-
-        function limpiarError(regla) {
-            var campo = document.getElementById(regla.campo);
-            var error = document.getElementById(regla.error);
-            if (campo) campo.classList.remove('campo-invalido');
-            if (error) error.textContent = '';
+  /* Autocompleta direccion y municipio con OpenStreetMap (si falla, no pasa nada) */
+  function geocodificar(lat, lon) {
+    var url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=es&lat=" + lat + "&lon=" + lon;
+    fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d) return;
+      var a = d.address || {};
+      var via = [a.road, a.house_number].filter(Boolean).join(" ");
+      var barrio = a.neighbourhood || a.suburb || a.quarter || "";
+      var texto = [via, barrio].filter(Boolean).join(", ");
+      if (!texto && d.display_name) texto = d.display_name.split(",").slice(0, 2).join(",").trim();
+      if (texto && (dirAutomatica || !campoDir.value.trim())) {
+        campoDir.value = texto.slice(0, LIM.max_direccion);
+        dirAutomatica = true;
+        $("hint-direccion").textContent = "Autocompletada desde el mapa. Puedes editarla para agregar más referencias.";
+        setError("direccion", "", campoDir);
+      }
+      if (!campoMuni.value) {
+        var candidatos = [a.city, a.town, a.village, a.municipality, a.county].filter(Boolean).map(norm);
+        for (var i = 0; i < campoMuni.options.length; i++) {
+          if (candidatos.indexOf(norm(campoMuni.options[i].textContent)) !== -1) { campoMuni.selectedIndex = i; break; }
         }
+      }
+      actualizarResumen();
+    }).catch(function () {});
+  }
 
-        function mostrarError(regla) {
-            var campo = document.getElementById(regla.campo);
-            var error = document.getElementById(regla.error);
-            if (campo) campo.classList.add('campo-invalido');
-            if (error) error.textContent = regla.mensaje;
-        }
+  function iniciarMapa() {
+    var cont = $("mapa-reporte");
+    if (!window.L) {
+      cont.innerHTML = '<div class="rep-map-fallback">No se pudo cargar el mapa. Puedes enviar el reporte escribiendo la dirección o el punto de referencia.</div>';
+      $("btn-ubicacion").style.display = "none";
+      return;
+    }
+    var lat0 = parseFloat(latInput.value), lon0 = parseFloat(lonInput.value);
+    var hay = !isNaN(lat0) && !isNaN(lon0);
+    var centro = hay ? [lat0, lon0] : (CENTROS[norm(textoMunicipio())] || [4.8143, -74.3547]);
+    var limites = L.latLngBounds([REG.lat_min, REG.lon_min], [REG.lat_max, REG.lon_max]);
 
-        function validarCampo(regla) {
-            var campo = document.getElementById(regla.campo);
-            if (!campo) return true;
+    mapa = L.map("mapa-reporte", { maxBounds: limites, maxBoundsViscosity: 0.9, minZoom: 9 })
+            .setView(centro, hay ? 16 : (textoMunicipio() ? 13 : 11));
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors", maxZoom: 19
+    }).addTo(mapa);
 
-            var valor = campo.value.trim();
-            var valido = valor.length > 0;
-            if (valido && regla.minLength) {
-                valido = valor.length >= regla.minLength;
-            }
+    if (hay) fijarCoordenadas(lat0, lon0, false);
+    mapa.on("click", function (e) { if (fijarCoordenadas(e.latlng.lat, e.latlng.lng, false)) geocodificar(e.latlng.lat, e.latlng.lng); });
+    setTimeout(function () { mapa.invalidateSize(); }, 250);
+  }
 
-            if (valido) {
-                limpiarError(regla);
-            } else {
-                mostrarError(regla);
-            }
-            return valido;
-        }
+  $("btn-quitar-pin").addEventListener("click", quitarPin);
 
-        reglas.forEach(function (regla) {
-            var campo = document.getElementById(regla.campo);
-            if (campo) {
-                campo.addEventListener('input', function () { validarCampo(regla); });
-                campo.addEventListener('change', function () { validarCampo(regla); });
-            }
-        });
+  $("btn-ubicacion").addEventListener("click", function () {
+    var btn = this;
+    if (!navigator.geolocation) { errorMapa("Tu navegador no soporta geolocalización. Marca el punto en el mapa."); return; }
+    btn.classList.add("is-loading");
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      btn.classList.remove("is-loading");
+      if (fijarCoordenadas(pos.coords.latitude, pos.coords.longitude, true)) geocodificar(pos.coords.latitude, pos.coords.longitude);
+    }, function () {
+      btn.classList.remove("is-loading");
+      errorMapa("No se pudo obtener tu ubicación. Revisa los permisos del navegador o márcala en el mapa.");
+    }, { enableHighAccuracy: true, timeout: 12000 });
+  });
 
-        if (form) {
-            form.addEventListener('submit', function (e) {
-                var todoValido = true;
-                reglas.forEach(function (regla) {
-                    if (!validarCampo(regla)) {
-                        todoValido = false;
-                    }
-                });
+  campoMuni.addEventListener("change", function () {
+    if (mapa && !latInput.value) {
+      var c = CENTROS[norm(textoMunicipio())];
+      if (c) mapa.flyTo(c, 13, { duration: 0.8 });
+    }
+    validar.municipio(); actualizarResumen();
+  });
 
-                if (!todoValido) {
-                    e.preventDefault();
-                    var primerError = document.querySelector('.campo-invalido');
-                    if (primerError) {
-                        primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }
-            });
-        }
+  /* ------------------------------------------------------------ validaciones */
+  var validar = {
+    tipo: function () {
+      var ok = !!tipoSeleccionado();
+      setError("tipo", ok ? "" : "Selecciona el tipo de emergencia");
+      return ok;
+    },
+    municipio: function () {
+      var ok = !!campoMuni.value;
+      setError("municipio", ok ? "" : "Selecciona el municipio donde ocurre", campoMuni);
+      return ok;
+    },
+    direccion: function () {
+      var ok = campoDir.value.trim().length > 0;
+      setError("direccion", ok ? "" : "La dirección o punto de referencia es obligatoria", campoDir);
+      return ok;
+    },
+    descripcion: function () {
+      var n = campoDesc.value.trim().length;
+      var ok = n >= LIM.min_descripcion;
+      setError("descripcion", ok ? "" : "La descripción debe tener al menos " + LIM.min_descripcion + " caracteres (faltan " + (LIM.min_descripcion - n) + ")", campoDesc);
+      return ok;
+    },
+    afectados: function () {
+      var v = campoAfect.value.trim();
+      var n = Number(v);
+      var ok = v === "" || (Number.isInteger(n) && n >= 0 && n <= LIM.max_afectados);
+      setError("afectados", ok ? "" : "Ingresa un número entre 0 y " + LIM.max_afectados);
+      return ok;
+    }
+  };
+
+  form.querySelectorAll('input[name="tipo"]').forEach(function (r) {
+    r.addEventListener("change", function () { validar.tipo(); actualizarResumen(); });
+  });
+  campoDir.addEventListener("input", function () {
+    dirAutomatica = false; $("hint-direccion").textContent = "";
+    if (campoDir.value.trim()) setError("direccion", "", campoDir);
+    actualizarResumen();
+  });
+  campoDesc.addEventListener("input", function () {
+    contarDescripcion();
+    if (campoDesc.value.trim().length >= LIM.min_descripcion) setError("descripcion", "", campoDesc);
+    actualizarResumen();
+  });
+  campoAfect.addEventListener("input", function () { validar.afectados(); });
+
+  function contarDescripcion() {
+    var n = campoDesc.value.length;
+    var c = $("contador-desc");
+    c.textContent = n + " / " + LIM.max_descripcion;
+    var util = campoDesc.value.trim().length;
+    c.classList.toggle("is-ok", util >= LIM.min_descripcion);
+    c.classList.toggle("is-bad", util > 0 && util < LIM.min_descripcion);
+  }
+
+  document.querySelectorAll(".rep-number button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var n = parseInt(campoAfect.value, 10);
+      if (isNaN(n)) n = 0;
+      n = Math.min(LIM.max_afectados, Math.max(0, n + parseInt(b.getAttribute("data-delta"), 10)));
+      campoAfect.value = n;
+      validar.afectados();
+    });
+  });
+
+  /* ------------------------------------------------------------ evidencias */
+  var archivos = [];
+  var inputEv = $("campo-evidencias");
+  var lista = $("lista-evidencias");
+  var zona = $("zona-evidencias");
+  var urlsTemporales = [];
+
+  function formatoTamano(b) { return b < 1048576 ? Math.max(1, Math.round(b / 1024)) + " KB" : (b / 1048576).toFixed(1) + " MB"; }
+
+  function sincronizarInput() {
+    try {
+      var dt = new DataTransfer();
+      archivos.forEach(function (f) { dt.items.add(f); });
+      inputEv.files = dt.files;
+    } catch (e) { /* navegadores muy antiguos: se enviaran los elegidos por el input */ }
+  }
+
+  function dibujarArchivos() {
+    urlsTemporales.forEach(function (u) { URL.revokeObjectURL(u); });
+    urlsTemporales = [];
+    lista.innerHTML = "";
+    archivos.forEach(function (f, i) {
+      var ext = f.name.split(".").pop().toLowerCase();
+      var card = document.createElement("div"); card.className = "rep-file";
+      var prev = document.createElement("div"); prev.className = "rep-file-prev";
+      if (f.type.indexOf("image/") === 0) {
+        var img = document.createElement("img"); var u = URL.createObjectURL(f); urlsTemporales.push(u);
+        img.src = u; img.alt = f.name; prev.appendChild(img);
+      } else {
+        prev.innerHTML = ext === "pdf"
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="14" height="16" rx="2"/><path d="m22 8-6 4 6 4V8z"/></svg>';
+      }
+      var info = document.createElement("div"); info.className = "rep-file-info";
+      var nombre = document.createElement("b"); nombre.textContent = f.name; nombre.title = f.name;
+      info.appendChild(nombre); info.appendChild(document.createTextNode(formatoTamano(f.size)));
+      var x = document.createElement("button"); x.type = "button"; x.className = "rep-file-x"; x.innerHTML = "&times;";
+      x.setAttribute("aria-label", "Quitar " + f.name);
+      x.addEventListener("click", function () { archivos.splice(i, 1); refrescarArchivos(); setError("evidencias", ""); });
+      card.appendChild(prev); card.appendChild(info); card.appendChild(x);
+      lista.appendChild(card);
+    });
+    $("ev-count").textContent = archivos.length;
+  }
+
+  function refrescarArchivos() { sincronizarInput(); dibujarArchivos(); actualizarResumen(); }
+
+  function agregarArchivos(nuevos) {
+    var problemas = [];
+    Array.prototype.forEach.call(nuevos, function (f) {
+      var ext = f.name.indexOf(".") > -1 ? f.name.split(".").pop().toLowerCase() : "";
+      if (CFG.extensiones.indexOf(ext) === -1) { problemas.push("“" + f.name + "”: formato no permitido"); return; }
+      if (f.size === 0) { problemas.push("“" + f.name + "”: el archivo está vacío"); return; }
+      if (f.size > LIM.max_mb * 1048576) { problemas.push("“" + f.name + "”: supera " + LIM.max_mb + " MB"); return; }
+      if (archivos.some(function (a) { return a.name === f.name && a.size === f.size; })) return;
+      if (archivos.length >= LIM.max_evidencias) { problemas.push("Solo puedes adjuntar " + LIM.max_evidencias + " archivos"); return; }
+      archivos.push(f);
+    });
+    setError("evidencias", problemas.join(" · "));
+    refrescarArchivos();
+  }
+
+  inputEv.addEventListener("change", function () { agregarArchivos(inputEv.files); });
+  ["dragenter", "dragover"].forEach(function (ev) {
+    zona.addEventListener(ev, function (e) { e.preventDefault(); zona.classList.add("is-over"); });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    zona.addEventListener(ev, function (e) { e.preventDefault(); zona.classList.remove("is-over"); });
+  });
+  zona.addEventListener("drop", function (e) { if (e.dataTransfer && e.dataTransfer.files) agregarArchivos(e.dataTransfer.files); });
+  zona.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inputEv.click(); } });
+
+  /* ------------------------------------------------------------ resumen y progreso */
+  function marcar(nombre, ok, texto) {
+    var li = document.querySelector('[data-check="' + nombre + '"]');
+    if (li) li.classList.toggle("is-ok", ok);
+    var v = document.querySelector('[data-val="' + nombre + '"]');
+    if (v && texto !== undefined) v.textContent = texto;
+  }
+
+  function actualizarResumen() {
+    var tipo = tipoSeleccionado();
+    var okTipo = !!tipo, okMuni = !!campoMuni.value;
+    var dir = campoDir.value.trim(), okDir = dir.length > 0;
+    var nDesc = campoDesc.value.trim().length, okDesc = nDesc >= LIM.min_descripcion;
+    var tienePin = !!(latInput.value && lonInput.value);
+
+    marcar("tipo", okTipo, okTipo ? tipo.parentNode.querySelector(".rep-tipo-nombre").textContent : "Sin seleccionar");
+    marcar("municipio", okMuni, okMuni ? textoMunicipio() : "Sin seleccionar");
+    marcar("direccion", okDir, okDir ? dir : "Pendiente");
+    marcar("descripcion", okDesc, okDesc ? nDesc + " caracteres" : (nDesc ? "Faltan " + (LIM.min_descripcion - nDesc) + " caracteres" : "Pendiente"));
+    marcar("mapa", tienePin, tienePin ? "Punto marcado" : "Sin marcar");
+    marcar("evidencias", archivos.length > 0, archivos.length ? archivos.length + (archivos.length === 1 ? " archivo" : " archivos") : "Ninguna");
+
+    var hechos = [okTipo, okMuni, okDir, okDesc].filter(Boolean).length;
+    $("barra-progreso").style.width = (hechos / 4 * 100) + "%";
+    $("txt-progreso").textContent = hechos + " de 4 obligatorios";
+    var pr = $("txt-prioridad");
+    if (okTipo) {
+      var p = tipo.getAttribute("data-prioridad");
+      pr.innerHTML = 'Prioridad <span class="pill pill-' + p + '">' + (CFG.prioridades[p] || p) + "</span>";
+    } else { pr.textContent = ""; }
+
+    // Pasos superiores: el primero sin completar es el activo
+    var estado = { tipo: okTipo, ubicacion: okMuni && okDir, detalles: okDesc, evidencias: archivos.length > 0 };
+    var activo = ["tipo", "ubicacion", "detalles", "evidencias"].filter(function (k) { return !estado[k]; })[0];
+    document.querySelectorAll(".rep-step").forEach(function (s) {
+      var k = s.getAttribute("data-step");
+      s.classList.toggle("is-done", estado[k]);
+      s.classList.toggle("is-active", k === activo);
+    });
+  }
+
+  /* ------------------------------------------------------------ envio */
+  var enviando = false;
+  form.addEventListener("submit", function (e) {
+    if (enviando) { e.preventDefault(); return; }
+    var resultados = [validar.tipo(), validar.municipio(), validar.direccion(), validar.descripcion(), validar.afectados()];
+    if (resultados.indexOf(false) !== -1) {
+      e.preventDefault();
+      var primero = form.querySelector(".rep-error:not(:empty)");
+      var seccion = primero ? primero.closest(".rep-card") : null;
+      if (seccion) seccion.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    enviando = true;
+    var btn = $("btn-enviar");
+    btn.disabled = true;
+    $("txt-enviar").textContent = archivos.length ? "Subiendo evidencias…" : "Enviando…";
+  });
+  // Si el usuario vuelve atras con el boton del navegador, se reactiva el boton
+  window.addEventListener("pageshow", function (e) {
+    if (e.persisted) { enviando = false; $("btn-enviar").disabled = false; $("txt-enviar").textContent = "Enviar reporte"; }
+  });
+
+  /* ------------------------------------------------------------ inicio */
+  iniciarMapa();
+  contarDescripcion();
+  actualizarChip();
+  actualizarResumen();
 })();
 </script>
 {% endblock %}

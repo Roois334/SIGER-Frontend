@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono_tipo %}
+{% block title %}{{ reporte.folio }} — SIGER{% endblock %}
+
+{% block extra_head %}
+{% if reporte.latitud is not none and reporte.longitud is not none %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% set tiene_mapa = reporte.latitud is not none and reporte.longitud is not none %}
+{% set orden = ['pendiente','validado','asignado','en_atencion','atendido','cerrado'] %}
+{% set n = orden.index(reporte.estado) if reporte.estado in orden else 0 %}
+{% set pasos = [
+  ('Reporte recibido', 'El incidente quedó registrado en el sistema.'),
+  ('Validación', 'Un responsable revisa y clasifica el reporte.'),
+  ('Asignación', 'Se relaciona con el organismo de respuesta.'),
+  ('En atención', 'El organismo está atendiendo la emergencia.'),
+  ('Atendido', 'La emergencia fue atendida y cerrada.')
+] %}
+{% set es_staff = session['usuario']['rol'] != 'ciudadano' %}
+
+<div class="container">
+  <div class="pg-crumbs" style="padding-top:34px;">
+    <a href="{{ url_for('dashboard') }}">Panel</a><span>/</span>
+    <a href="{{ url_for(volver_endpoint) }}">{{ 'Mis reportes' if volver_endpoint == 'mis_reportes' else 'Gestión de emergencias' }}</a><span>/</span>
+    <span>{{ reporte.folio }}</span>
+  </div>
+
+  {% if nuevo %}
+  <div class="det-banner animate-in" role="status">
+    <div class="det-banner-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div>
+      <h2>¡Reporte enviado correctamente!</h2>
+      <p>Tu emergencia quedó registrada y asociada a tu cuenta. Guarda este identificador para hacerle seguimiento.</p>
+      <div class="det-folio"><b id="folio-txt">{{ reporte.folio }}</b>
+        <button type="button" class="rep-btn-ghost" id="btn-copiar" data-copiar="{{ reporte.folio }}">Copiar</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="det-head animate-in">
+    <div class="det-head-ico">{{ icono_tipo(reporte.tipo, 30) }}</div>
+    <div>
+      <h1>{{ reporte.tipo|tipo_bonito }}</h1>
+      <div class="det-head-meta">
+        <span class="lst-folio">{{ reporte.folio }}</span><span>·</span>
+        <span>{{ reporte.fecha_hora|fecha_hora }}</span>
+      </div>
+      <div class="det-head-meta">
+        <span class="pill pill-{{ reporte.prioridad }}">Prioridad {{ prioridad_labels.get(reporte.prioridad, reporte.prioridad)|lower }}</span>
+        <span class="pill {{ 'pill-estado' if reporte.estado == 'pendiente' else 'pill-estado-ok' }}">{{ estado_labels.get(reporte.estado, reporte.estado) }}</span>
+      </div>
+    </div>
+    <div class="det-head-actions">
+      <a href="{{ url_for(volver_endpoint) }}" class="rep-btn-ghost">← Volver</a>
+      {% if puede('reportes.crear') %}
+      <a href="{{ url_for('reportar_emergencia') }}" class="btn-cta adm-filter-btn">Reportar otra emergencia</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="det-layout">
+    <div class="det-col">
+      <section class="det-card animate-in">
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>Descripción del incidente</h3>
+        <p class="det-desc">{{ reporte.descripcion }}</p>
+      </section>
+
+      <section class="det-card animate-in">
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Ubicación</h3>
+        {% if tiene_mapa %}<div id="mapa-detalle" class="det-map"></div>{% endif %}
+        <div class="det-addr">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div>{{ reporte.direccion }}<small>{{ reporte.municipio or '—' }}{% if tiene_mapa %} · {{ '%.5f'|format(reporte.latitud) }}, {{ '%.5f'|format(reporte.longitud) }}{% endif %}</small></div>
+        </div>
+        {% if tiene_mapa %}
+        <a class="det-link" target="_blank" rel="noopener" href="https://www.google.com/maps?q={{ reporte.latitud }},{{ reporte.longitud }}">Abrir en Google Maps ↗</a>
+        {% else %}
+        <p class="det-empty" style="margin-top:8px;">El ciudadano no marcó un punto exacto en el mapa.</p>
+        {% endif %}
+      </section>
+
+      <section class="det-card animate-in">
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Evidencias ({{ reporte.evidencias|length }})</h3>
+        {% if reporte.evidencias %}
+        <div class="det-gallery">
+          {% for e in reporte.evidencias %}
+          <a class="det-ev" href="{{ url_for('ver_evidencia', evidencia_id=e.id) }}" target="_blank" rel="noopener"
+             data-tipo="{{ e.tipo }}" data-nombre="{{ e.nombre_archivo }}">
+            <div class="det-ev-prev">
+              {% if e.tipo == 'imagen' %}
+              <img loading="lazy" src="{{ url_for('ver_evidencia', evidencia_id=e.id) }}" alt="{{ e.nombre_archivo }}">
+              {% elif e.tipo == 'video' %}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+              {% else %}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              {% endif %}
+            </div>
+            <div class="det-ev-name" title="{{ e.nombre_archivo }}">{{ e.nombre_archivo }}</div>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="det-empty">Este reporte no tiene evidencias adjuntas.</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <div class="det-col">
+      <section class="det-card animate-in">
+        <h3>Datos del reporte</h3>
+        <dl class="det-dl">
+          <div><dt>Identificador</dt><dd>{{ reporte.folio }}</dd></div>
+          <div><dt>Fecha y hora</dt><dd>{{ reporte.fecha_hora|fecha_hora }}</dd></div>
+          <div><dt>Municipio</dt><dd>{{ reporte.municipio or '—' }}</dd></div>
+          <div><dt>Personas afectadas</dt><dd>{{ reporte.afectados }}</dd></div>
+          <div><dt>Prioridad</dt><dd><span class="pill pill-{{ reporte.prioridad }}">{{ prioridad_labels.get(reporte.prioridad, reporte.prioridad) }}</span></dd></div>
+          {% if es_staff and reporte.ciudadano %}<div><dt>Reportado por</dt><dd>{{ reporte.ciudadano }}</dd></div>{% endif %}
+        </dl>
+      </section>
+
+      <section class="det-card animate-in">
+        <h3>Seguimiento</h3>
+        <ol class="det-steps">
+          {% for titulo, texto in pasos %}
+          <li class="{{ 'is-done' if loop.index0 <= n else ('is-now' if loop.index0 == n + 1 else '') }}">
+            <i>{% if loop.index0 <= n %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{% else %}{{ loop.index }}{% endif %}</i>
+            <div><b>{{ titulo }}</b><small>{{ texto }}</small></div>
+          </li>
+          {% endfor %}
+        </ol>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Vista de evidencia">
+  <button type="button" class="lightbox-x" id="lightbox-x" aria-label="Cerrar">&times;</button>
+  <div id="lightbox-cont"></div>
+  <div class="lightbox-cap" id="lightbox-cap"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if tiene_mapa %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+{% endif %}
+<script>
+(function () {
+  "use strict";
+
+  /* Mapa */
+  var el = document.getElementById("mapa-detalle");
+  if (el) {
+    if (window.L) {
+      var pos = [{{ reporte.latitud if reporte.latitud is not none else 0 }}, {{ reporte.longitud if reporte.longitud is not none else 0 }}];
+      var mapa = L.map("mapa-detalle", { scrollWheelZoom: false }).setView(pos, 16);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors", maxZoom: 19
+      }).addTo(mapa);
+      L.marker(pos).addTo(mapa);
+    } else {
+      el.style.display = "none";
+    }
+  }
+
+  /* Copiar folio */
+  var btnCopiar = document.getElementById("btn-copiar");
+  if (btnCopiar) {
+    btnCopiar.addEventListener("click", function () {
+      var txt = btnCopiar.getAttribute("data-copiar");
+      var listo = function () { btnCopiar.textContent = "¡Copiado!"; setTimeout(function () { btnCopiar.textContent = "Copiar"; }, 1800); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(listo, listo);
+      } else {
+        var t = document.createElement("textarea"); t.value = txt; document.body.appendChild(t); t.select();
+        try { document.execCommand("copy"); } catch (e) {}
+        document.body.removeChild(t); listo();
+      }
+    });
+  }
+
+  /* Visor de imagenes y video */
+  var box = document.getElementById("lightbox");
+  var cont = document.getElementById("lightbox-cont");
+  var cap = document.getElementById("lightbox-cap");
+  function cerrar() { box.classList.remove("is-open"); cont.innerHTML = ""; document.body.style.overflow = ""; }
+  document.querySelectorAll(".det-ev").forEach(function (a) {
+    var tipo = a.getAttribute("data-tipo");
+    if (tipo !== "imagen" && tipo !== "video") return;
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      cont.innerHTML = "";
+      var m;
+      if (tipo === "imagen") { m = document.createElement("img"); m.alt = a.getAttribute("data-nombre"); }
+      else { m = document.createElement("video"); m.controls = true; m.autoplay = true; }
+      m.src = a.getAttribute("href");
+      cont.appendChild(m);
+      cap.textContent = a.getAttribute("data-nombre");
+      box.classList.add("is-open");
+      document.body.style.overflow = "hidden";
+    });
+  });
+  document.getElementById("lightbox-x").addEventListener("click", cerrar);
+  box.addEventListener("click", function (e) { if (e.target === box) cerrar(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrar(); });
+})();
+</script>
+{% endblock %}

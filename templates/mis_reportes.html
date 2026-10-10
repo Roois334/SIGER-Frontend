@@ -1,138 +1,104 @@
 {% extends "base.html" %}
+{% from "_iconos.html" import icono_tipo %}
 {% block title %}Mis reportes — SIGER{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-{% endblock %}
-
 {% block content %}
+{% set pendientes = reportes|selectattr('estado', 'equalto', 'pendiente')|list|length %}
+{% set urgentes = reportes|selectattr('prioridad', 'in', ['critica', 'alta'])|list|length %}
 
 <div class="container">
-    <div class="dash-hero animate-in">
-        <h1 class="dash-title">Mis reportes</h1>
-        <p class="dash-sub">Emergencias que has registrado.</p>
-    </div>
+  <div class="dash-hero animate-in">
+    <div class="pg-crumbs"><a href="{{ url_for('dashboard') }}">Panel</a><span>/</span><span>Mis reportes</span></div>
+    <h1 class="dash-title">Mis reportes</h1>
+    <p class="dash-sub">Las emergencias que has registrado y el estado en que se encuentran.</p>
+  </div>
 
-    <div class="adm-table-wrap animate-in">
-        {% if reportes %}
-        <table class="adm-table">
-            <thead>
-                <tr>
-                    <th>Folio</th>
-                    <th>Tipo</th>
-                    <th>Municipio</th>
-                    <th>Fecha</th>
-                    <th>Estado</th>
-                    <th>Evidencias</th>
-                    <th>Ubicación</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in reportes %}
-                <tr>
-                    <td>{{ r.folio }}</td>
-                    <td>{{ r.tipo }}</td>
-                    <td>{{ r.municipio or "—" }}</td>
-                    <td>{{ r.fecha_hora[:16].replace('T', ' ') if r.fecha_hora else "—" }}</td>
-                    <td>
-                        {% if r.estado == 'pendiente' %}
-                        <span class="adm-badge adm-badge-inactivo">Pendiente</span>
-                        {% else %}
-                        <span class="adm-badge adm-badge-activo">{{ r.estado|capitalize }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if r.evidencias %}
-                        <button type="button" class="adm-btn adm-btn-edit btn-ver-evidencias" data-target="evid-{{ r.id }}">
-                            Ver evidencias ({{ r.evidencias|length }})
-                        </button>
-                        {% else %}
-                        Sin evidencias
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if r.latitud and r.longitud %}
-                        <button type="button" class="adm-btn adm-btn-edit btn-ver-mapa"
-                                data-lat="{{ r.latitud }}" data-lon="{{ r.longitud }}" data-target="mapa-{{ r.id }}">
-                            Ver mapa
-                        </button>
-                        {% else %}
-                        —
-                        {% endif %}
-                    </td>
-                </tr>
-                {% if r.evidencias %}
-                <tr id="fila-evid-{{ r.id }}" style="display:none;">
-                    <td colspan="7">
-                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                            {% for e in r.evidencias %}
-                            <a href="{{ url_for('ver_evidencia', evidencia_id=e.id) }}" target="_blank"
-                               class="adm-btn adm-btn-edit" style="text-decoration:none;">
-                                {{ e.nombre_archivo }}
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </td>
-                </tr>
-                {% endif %}
-                {% if r.latitud and r.longitud %}
-                <tr id="fila-mapa-{{ r.id }}" style="display:none;">
-                    <td colspan="7">
-                        <div id="mapa-{{ r.id }}" style="height:260px;border-radius:12px;overflow:hidden;border:1px solid var(--borde);"></div>
-                    </td>
-                </tr>
-                {% endif %}
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="adm-empty">Todavía no has registrado ninguna emergencia.</div>
-        {% endif %}
-    </div>
+  {% if reportes %}
+  <div class="lst-stats animate-in">
+    <div class="lst-stat"><span>Total de reportes</span><b>{{ reportes|length }}</b></div>
+    <div class="lst-stat is-warn"><span>Pendientes</span><b>{{ pendientes }}</b></div>
+    <div class="lst-stat is-danger"><span>Prioridad alta o crítica</span><b>{{ urgentes }}</b></div>
+    <div class="lst-stat"><span>Con evidencias</span><b>{{ reportes|selectattr('evidencias')|list|length }}</b></div>
+  </div>
 
-    <div style="margin-top:16px;">
-        <a href="{{ url_for('reportar_emergencia') }}" class="btn-cta adm-filter-btn">Registrar nueva emergencia</a>
+  <div class="lst-tools">
+    <input type="search" id="filtro-reportes" class="rep-input" placeholder="Buscar por folio, tipo, municipio o dirección…" autocomplete="off">
+    <a href="{{ url_for('reportar_emergencia') }}" class="btn-cta adm-filter-btn">+ Registrar nueva emergencia</a>
+  </div>
+
+  <div class="adm-table-wrap animate-in">
+    <table class="adm-table lst-table" id="tabla-reportes">
+      <thead>
+        <tr>
+          <th>Emergencia</th>
+          <th>Folio</th>
+          <th>Municipio</th>
+          <th>Fecha</th>
+          <th>Prioridad</th>
+          <th>Estado</th>
+          <th>Adjuntos</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reportes %}
+        <tr class="lst-row" data-href="{{ url_for('reporte_detalle', reporte_id=r.id) }}"
+            data-buscar="{{ (r.folio ~ ' ' ~ r.tipo ~ ' ' ~ (r.tipo|tipo_bonito) ~ ' ' ~ (r.municipio or '') ~ ' ' ~ r.direccion)|lower }}">
+          <td>
+            <div class="lst-tipo">
+              <span class="lst-tipo-ico">{{ icono_tipo(r.tipo, 18) }}</span>
+              <div><b>{{ r.tipo|tipo_bonito }}</b><small>{{ r.direccion[:38] }}{{ '…' if r.direccion|length > 38 }}</small></div>
+            </div>
+          </td>
+          <td><a class="lst-folio" href="{{ url_for('reporte_detalle', reporte_id=r.id) }}">{{ r.folio }}</a></td>
+          <td>{{ r.municipio or "—" }}</td>
+          <td>{{ r.fecha_hora|fecha_hora }}</td>
+          <td><span class="pill pill-{{ r.prioridad }}">{{ prioridad_labels.get(r.prioridad, r.prioridad) }}</span></td>
+          <td><span class="pill {{ 'pill-estado' if r.estado == 'pendiente' else 'pill-estado-ok' }}">{{ estado_labels.get(r.estado, r.estado) }}</span></td>
+          <td>{{ r.evidencias|length if r.evidencias else '—' }}</td>
+          <td><a href="{{ url_for('reporte_detalle', reporte_id=r.id) }}" class="adm-btn adm-btn-edit">Ver detalle</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="adm-empty" id="sin-resultados" style="display:none;">Ningún reporte coincide con tu búsqueda.</div>
+  </div>
+
+  {% else %}
+  <div class="adm-table-wrap animate-in">
+    <div class="lst-empty">
+      <div class="lst-empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <h3>Aún no has registrado emergencias</h3>
+      <p>Cuando reportes una, aparecerá aquí con su identificador y su estado.</p>
+      <a href="{{ url_for('reportar_emergencia') }}" class="btn-cta adm-filter-btn">Registrar una emergencia</a>
     </div>
+  </div>
+  {% endif %}
 </div>
-
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
-var mapasIniciados = {};
-document.querySelectorAll('.btn-ver-mapa').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var targetId = btn.getAttribute('data-target');
-            var fila = document.getElementById('fila-' + targetId);
-            var abierta = fila.style.display !== 'none';
-
-            fila.style.display = abierta ? 'none' : 'table-row';
-            btn.textContent = abierta ? 'Ver mapa' : 'Ocultar mapa';
-
-            if (!abierta && !mapasIniciados[targetId]) {
-                var lat = parseFloat(btn.getAttribute('data-lat'));
-                var lon = parseFloat(btn.getAttribute('data-lon'));
-                var mapa = L.map(targetId, { scrollWheelZoom: false }).setView([lat, lon], 15);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
-                }).addTo(mapa);
-                L.marker([lat, lon]).addTo(mapa);
-                mapasIniciados[targetId] = true;
-            }
-        });
-});
-
-document.querySelectorAll('.btn-ver-evidencias').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var targetId = btn.getAttribute('data-target');
-            var fila = document.getElementById('fila-' + targetId);
-            var abierta = fila.style.display !== 'none';
-            var textoBase = btn.textContent.replace('Ocultar', 'Ver');
-
-            fila.style.display = abierta ? 'none' : 'table-row';
-            btn.textContent = abierta ? textoBase.replace('Ver', 'Ver') : textoBase.replace('Ver', 'Ocultar');
-        });
-});
+(function () {
+  var filas = document.querySelectorAll("#tabla-reportes .lst-row");
+  filas.forEach(function (f) {
+    f.addEventListener("click", function (e) {
+      if (e.target.closest("a, button")) return;
+      window.location = f.getAttribute("data-href");
+    });
+  });
+  var buscador = document.getElementById("filtro-reportes");
+  if (buscador) {
+    buscador.addEventListener("input", function () {
+      var q = buscador.value.trim().toLowerCase(), visibles = 0;
+      filas.forEach(function (f) {
+        var coincide = !q || f.getAttribute("data-buscar").indexOf(q) !== -1;
+        f.style.display = coincide ? "" : "none";
+        if (coincide) visibles++;
+      });
+      document.getElementById("sin-resultados").style.display = visibles ? "none" : "block";
+    });
+  }
+})();
 </script>
 {% endblock %}
