@@ -1,8 +1,11 @@
 ﻿import os
+import time
+from datetime import datetime
 import requests
 from flask import Flask, render_template, request, redirect, url_for, session, flash, Response, abort
 from config import Config
-from utilities.decorators import login_required, admin_required, roles_required
+from utilities.decorators import login_required, admin_required, permiso_required
+from utilities.permisos import puede, tiene_alcance_municipal
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -33,6 +36,81 @@ def inject_backend_url():
     return {"backend_url": BACKEND_URL}
 
 
+@app.context_processor
+def inject_permisos():
+    """En las plantillas: {% if puede('reportes.crear') %} ... {% endif %}"""
+    usuario = session.get("usuario")
+    return {"puede": lambda permiso: puede(usuario, permiso)}
+
+
+MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+
+
+@app.template_filter("fecha_hora")
+def filtro_fecha_hora(valor, con_hora=True):
+    """'2026-10-10T14:43:00' -> '10 oct 2026 · 2:43 p. m.'"""
+    if not valor:
+        return "—"
+    try:
+        d = datetime.fromisoformat(valor[:19])
+    except ValueError:
+        return valor
+    texto = f"{d.day} {MESES[d.month - 1]} {d.year}"
+    if con_hora:
+        h12 = d.hour % 12 or 12
+        texto += f" · {h12}:{d.minute:02d} {'a. m.' if d.hour < 12 else 'p. m.'}"
+    return texto
+
+
+TIPOS_CON_TILDE = {
+    "Inundacion": "Inundación",
+    "Accidente de transito": "Accidente de tránsito",
+    "Emergencia medica": "Emergencia médica",
+}
+
+
+@app.template_filter("tipo_bonito")
+def filtro_tipo_bonito(tipo):
+    """Los tipos se guardan sin tildes; aqui se muestran bien escritos."""
+    return TIPOS_CON_TILDE.get(tipo, tipo)
+
+
+@app.errorhandler(413)
+def archivo_demasiado_grande(e):
+    flash("Los archivos superan el tamano maximo permitido (10 MB por archivo, 5 archivos)", "error")
+    return redirect(url_for("reportar_emergencia"))
+
+
+# ---------------- Sincronizacion del usuario con el backend ----------------
+# Si el administrador cambia el rol o desactiva una cuenta, la sesion del
+# frontend se actualiza sola (cada INTERVALO_SYNC_SEG segundos como maximo).
+RUTAS_SIN_SYNC = {"static", "index", "login", "registro", "logout"}
+INTERVALO_SYNC_SEG = 60
+
+
+@app.before_request
+def sincronizar_usuario():
+    if "usuario" not in session or request.endpoint in RUTAS_SIN_SYNC:
+        return None
+    if time.time() - session.get("sync_ts", 0) < INTERVALO_SYNC_SEG:
+        return None
+
+    try:
+        r = requests.get(BACKEND_URL + "/api/usuarios/me", headers=_auth_headers(), timeout=5)
+    except requests.exceptions.ConnectionError:
+        return None
+
+    if r.status_code in (401, 422):  # cuenta desactivada, token vencido o invalido
+        session.clear()
+        flash("Tu sesion expiro o tu cuenta fue desactivada. Ingresa de nuevo", "error")
+        return redirect(url_for("login"))
+
+    if r.status_code == 200:
+        session["usuario"] = r.json()["usuario"]
+        session["sync_ts"] = time.time()
+    return None
+
+
 @app.route("/")
 def index():
     if "usuario" in session:
@@ -60,6 +138,7 @@ def login():
             data = r.json()
             session["usuario"] = data["usuario"]
             session["token"] = data["token"]
+            session["sync_ts"] = time.time()
             flash("Bienvenido, " + data["usuario"]["nombre"] + "!", "success")
             return redirect(url_for("dashboard"))
 
@@ -80,7 +159,6 @@ def registro():
             "email": request.form.get("email", "").strip().lower(),
             "municipio": request.form.get("municipio", "").strip(),
             "password": request.form.get("password", ""),
-            "rol": "ciudadano",
         }
         confirmar = request.form.get("confirmar", "")
 
@@ -98,6 +176,7 @@ def registro():
             data = r.json()
             session["usuario"] = data["usuario"]
             session["token"] = data["token"]
+            session["sync_ts"] = time.time()
             flash("Cuenta creada. Bienvenido a SIGER, " + payload["nombre"] + "!", "success")
             return redirect(url_for("dashboard"))
 
@@ -190,6 +269,7 @@ def admin_usuario_editar(user_id):
             return redirect(url_for("admin_usuario_editar", user_id=user_id))
 
         if r.status_code == 200:
+            session["sync_ts"] = 0  # por si el admin se edito a si mismo
             flash("Usuario actualizado correctamente", "success")
             return redirect(url_for("admin_usuarios"))
 
@@ -209,7 +289,8 @@ def admin_usuario_editar(user_id):
     usuario = r.json()["usuario"]
     return render_template("admin_usuario_editar.html",
                             usuario=usuario, role_labels=ROLE_LABELS,
-                            municipios=MUNICIPIOS_SABANA_OCCIDENTE)
+                            municipios=MUNICIPIOS_SABANA_OCCIDENTE,
+                            es_mi_cuenta=(usuario["id"] == session["usuario"]["id"]))
 
 
 @app.route("/admin/usuarios/<int:user_id>/estado", methods=["POST"])
@@ -439,6 +520,7 @@ def admin_organismo_estado(organismo_id):
 
 # ---------------- Reportes de emergencia ----------------
 
+# Respaldo por si el backend no responde la configuracion (la fuente real es el backend)
 TIPOS_EMERGENCIA = [
     "Incendio",
     "Inundacion",
@@ -448,17 +530,67 @@ TIPOS_EMERGENCIA = [
     "Emergencia medica",
     "Otro",
 ]
+PRIORIDAD_POR_TIPO = {
+    "Incendio": "alta", "Inundacion": "alta", "Accidente de transito": "media",
+    "Deslizamiento": "alta", "Fuga o derrame de sustancias": "critica",
+    "Emergencia medica": "critica", "Otro": "media",
+}
+CONFIG_REPORTE_RESPALDO = {
+    "tipos": [{"nombre": t, "prioridad": PRIORIDAD_POR_TIPO[t]} for t in TIPOS_EMERGENCIA],
+    "limites": {"max_evidencias": 5, "max_mb": 10, "max_afectados": 100000,
+                "min_descripcion": 15, "max_descripcion": 2000, "max_direccion": 200},
+    "extensiones": ["gif", "jpeg", "jpg", "mp4", "pdf", "png"],
+    "region": {"lat_min": 4.3, "lat_max": 5.3, "lon_min": -75.0, "lon_max": -73.8},
+}
+
+PRIORIDAD_LABELS = {
+    "baja": "Baja",
+    "media": "Media",
+    "alta": "Alta",
+    "critica": "Crítica",
+}
+
+ESTADO_LABELS = {
+    "pendiente": "Pendiente",
+    "validado": "Validado",
+    "asignado": "Asignado",
+    "en_atencion": "En atención",
+    "atendido": "Atendido",
+    "cerrado": "Cerrado",
+}
+
+
+def _config_reporte():
+    """Tipos, prioridades y limites desde el backend (con respaldo local)."""
+    try:
+        r = requests.get(BACKEND_URL + "/api/reportes/configuracion", headers=_auth_headers(), timeout=5)
+        if r.status_code == 200:
+            return r.json()
+    except requests.exceptions.RequestException:
+        pass
+    return CONFIG_REPORTE_RESPALDO
 
 
 @app.route("/reportar-emergencia", methods=["GET", "POST"])
-@login_required
+@permiso_required("reportes.crear")
 def reportar_emergencia():
+    config = _config_reporte()
+
     try:
         r_mun = requests.get(BACKEND_URL + "/api/municipios/activos", headers=_auth_headers(), timeout=5)
         municipios = r_mun.json().get("municipios", []) if r_mun.status_code == 200 else []
     except requests.exceptions.ConnectionError:
         flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
         municipios = []
+
+    # Municipio del usuario como sugerencia inicial
+    municipio_usuario = next(
+        (str(m["id"]) for m in municipios if m["nombre"] == session["usuario"].get("municipio")), "")
+
+    def mostrar(form_data):
+        return render_template("reportar_emergencia.html", config=config, municipios=municipios,
+                                form_data=form_data, municipio_sugerido=municipio_usuario,
+                                prioridad_labels=PRIORIDAD_LABELS)
 
     if request.method == "POST":
         form_data = {
@@ -471,16 +603,6 @@ def reportar_emergencia():
             "afectados": request.form.get("afectados", "0"),
         }
 
-        payload = {
-            "tipo": form_data["tipo"],
-            "municipio_id": form_data["municipio_id"],
-            "direccion": form_data["direccion"],
-            "latitud": form_data["latitud"],
-            "longitud": form_data["longitud"],
-            "descripcion": form_data["descripcion"],
-            "afectados": form_data["afectados"],
-        }
-
         archivos = [
             ("evidencias", (f.filename, f.stream, f.mimetype))
             for f in request.files.getlist("evidencias") if f and f.filename
@@ -489,42 +611,74 @@ def reportar_emergencia():
         try:
             r = requests.post(
                 BACKEND_URL + "/api/reportes",
-                data=payload,
+                data=form_data,
                 files=archivos if archivos else None,
                 headers=_auth_headers(),
-                timeout=15,
+                timeout=30,
             )
         except requests.exceptions.ConnectionError:
             flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
-            return render_template("reportar_emergencia.html", tipos=TIPOS_EMERGENCIA,
-                                    municipios=municipios, form_data=form_data)
+            return mostrar(form_data)
 
         if r.status_code == 201:
             reporte = r.json()["reporte"]
-            flash("Reporte enviado correctamente", "success")
-            return render_template("reporte_confirmacion.html", reporte=reporte)
+            # Redirigir (patron POST/Redirect/GET): si el usuario recarga la pagina
+            # NO se crea un reporte duplicado.
+            return redirect(url_for("reporte_detalle", reporte_id=reporte["id"], nuevo=1))
 
-        flash(r.json().get("error", "No se pudo registrar el reporte"), "error")
-        return render_template("reportar_emergencia.html", tipos=TIPOS_EMERGENCIA,
-                                municipios=municipios, form_data=form_data)
+        try:
+            mensaje = r.json().get("error", "No se pudo registrar el reporte")
+        except ValueError:
+            mensaje = "No se pudo registrar el reporte"
+        flash(mensaje, "error")
+        return mostrar(form_data)
 
-    return render_template("reportar_emergencia.html", tipos=TIPOS_EMERGENCIA, municipios=municipios, form_data=None)
+    return mostrar(None)
 
 
 @app.route("/mis-reportes")
-@login_required
+@permiso_required("reportes.ver_propios")
 def mis_reportes():
     try:
         r = requests.get(BACKEND_URL + "/api/reportes", headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
         flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
-        return render_template("mis_reportes.html", reportes=[])
+        return render_template("mis_reportes.html", reportes=[], prioridad_labels=PRIORIDAD_LABELS,
+                                estado_labels=ESTADO_LABELS)
 
     if r.status_code != 200:
         flash(r.json().get("error", "No se pudo cargar tus reportes"), "error")
-        return render_template("mis_reportes.html", reportes=[])
+        return render_template("mis_reportes.html", reportes=[], prioridad_labels=PRIORIDAD_LABELS,
+                                estado_labels=ESTADO_LABELS)
 
-    return render_template("mis_reportes.html", reportes=r.json().get("reportes", []))
+    return render_template("mis_reportes.html", reportes=r.json().get("reportes", []),
+                            prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
+
+
+@app.route("/reportes/<int:reporte_id>")
+@login_required
+def reporte_detalle(reporte_id):
+    """
+    Detalle de un reporte. Lo ven: su dueno, el administrador y los
+    gestores/organismos del mismo municipio (el backend decide).
+    """
+    volver = "mis_reportes" if session["usuario"]["rol"] == "ciudadano" else "gestion_emergencias"
+    try:
+        r = requests.get(BACKEND_URL + f"/api/reportes/{reporte_id}", headers=_auth_headers(), timeout=5)
+    except requests.exceptions.ConnectionError:
+        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        return redirect(url_for(volver))
+
+    if r.status_code != 200:
+        flash("No se encontro el reporte o no tienes acceso a el", "error")
+        return redirect(url_for(volver))
+
+    reporte = r.json()["reporte"]
+    return render_template("reporte_detalle.html", reporte=reporte,
+                            nuevo=request.args.get("nuevo") == "1",
+                            es_dueno=reporte["ciudadano_id"] == session["usuario"]["id"],
+                            volver_endpoint=volver,
+                            prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
 
 
 @app.route("/evidencias/<int:evidencia_id>")
@@ -536,7 +690,7 @@ def ver_evidencia(evidencia_id):
     """
     try:
         r = requests.get(BACKEND_URL + f"/api/reportes/evidencias/{evidencia_id}",
-                          headers=_auth_headers(), timeout=10)
+                          headers=_auth_headers(), timeout=15)
     except requests.exceptions.ConnectionError:
         abort(502)
 
@@ -547,23 +701,16 @@ def ver_evidencia(evidencia_id):
     if r.status_code != 200:
         abort(502)
 
-    return Response(r.content, mimetype=r.headers.get("Content-Type", "application/octet-stream"))
-
-PRIORIDAD_LABELS = {
-    "baja": "Baja",
-    "media": "Media",
-    "alta": "Alta",
-    "critica": "Critica",
-}
-
-ESTADO_LABELS = {
-    "pendiente": "Pendiente",
-}
+    respuesta = Response(r.content, mimetype=r.headers.get("Content-Type", "application/octet-stream"))
+    respuesta.headers["Cache-Control"] = "private, max-age=3600"
+    respuesta.headers["X-Content-Type-Options"] = "nosniff"
+    return respuesta
 
 
 @app.route("/gestion/emergencias")
-@roles_required("gestor_municipal", "administrador")
+@permiso_required("emergencias.consultar")
 def gestion_emergencias():
+    alcance_municipal = tiene_alcance_municipal(session["usuario"]["rol"])
     filtros = {
         "q": request.args.get("q", "").strip(),
         "tipo": request.args.get("tipo", ""),
@@ -572,27 +719,28 @@ def gestion_emergencias():
         "municipio_id": request.args.get("municipio_id", ""),
     }
     params = {k: v for k, v in filtros.items() if v}
+    tipos = [t["nombre"] for t in _config_reporte()["tipos"]]
+
+    def mostrar(reportes, municipios):
+        return render_template("gestion_emergencias.html", reportes=reportes, municipios=municipios,
+                                tipos=tipos, filtros=filtros, alcance_municipal=alcance_municipal,
+                                prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
 
     try:
         r_rep = requests.get(BACKEND_URL + "/api/reportes/gestion", headers=_auth_headers(), params=params, timeout=5)
         r_mun = requests.get(BACKEND_URL + "/api/municipios/activos", headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
         flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
-        return render_template("gestion_emergencias.html", reportes=[], municipios=[],
-                                tipos=TIPOS_EMERGENCIA, filtros=filtros,
-                                prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
+        return mostrar([], [])
 
     if r_rep.status_code != 200:
         flash(r_rep.json().get("error", "No se pudo cargar el listado de emergencias"), "error")
-        return render_template("gestion_emergencias.html", reportes=[], municipios=[],
-                                tipos=TIPOS_EMERGENCIA, filtros=filtros,
-                                prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
+        return mostrar([], [])
 
-    reportes = r_rep.json().get("reportes", [])
     municipios = r_mun.json().get("municipios", []) if r_mun.status_code == 200 else []
-    return render_template("gestion_emergencias.html", reportes=reportes, municipios=municipios,
-                            tipos=TIPOS_EMERGENCIA, filtros=filtros,
-                            prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
+    return mostrar(r_rep.json().get("reportes", []), municipios)
+
+
 @app.route("/logout")
 def logout():
     session.clear()

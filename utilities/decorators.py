@@ -1,5 +1,6 @@
 from functools import wraps
 from flask import session, redirect, url_for, flash
+from utilities.permisos import puede
 
 
 def login_required(view):
@@ -39,6 +40,25 @@ def roles_required(*roles_permitidos):
                 flash("Debes iniciar sesion primero", "error")
                 return redirect(url_for("login"))
             if session["usuario"].get("rol") not in roles_permitidos:
+                flash("No tienes permisos para acceder a esa seccion", "error")
+                return redirect(url_for("dashboard"))
+            return view(*args, **kwargs)
+        return wrapped
+    return decorador
+
+
+def permiso_required(permiso):
+    """
+    Exige sesion iniciada Y el permiso indicado en utilities/permisos.py.
+    Uso: @permiso_required("reportes.crear")
+    """
+    def decorador(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if "usuario" not in session:
+                flash("Debes iniciar sesion primero", "error")
+                return redirect(url_for("login"))
+            if not puede(session["usuario"], permiso):
                 flash("No tienes permisos para acceder a esa seccion", "error")
                 return redirect(url_for("dashboard"))
             return view(*args, **kwargs)
