@@ -35,17 +35,43 @@
     </a>
     {% endif %}
 
+    {% if not puede('usuarios.administrar') %}
+    <a href="{{ url_for('organismos_info') }}" class="dash-card dash-card-link">
+      <div class="dash-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.5V5l-8-3-8 3v5.5C4 17.5 12 22 12 22z"/><path d="M9 12l2 2 4-4"/></svg>
+      </div>
+      <h3>Organismos de atención</h3>
+      <p>Conoce quién atiende cada tipo de emergencia, para qué sirve cada organismo y a qué línea llamar.</p>
+      <span class="dash-card-tag dash-card-tag-live">Disponible</span>
+    </a>
+    {% endif %}
+
     {% if puede('emergencias.consultar') %}
     <a href="{{ url_for('gestion_emergencias') }}" class="dash-card dash-card-link">
       <div class="dash-card-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       </div>
+      {% if session['usuario']['rol'] == 'organismo_atencion' %}
+      <h3>Emergencias asignadas</h3>
+      <p>Atiende las emergencias que el gestor de tu municipio asignó a tu organismo.</p>
+      {% else %}
       <h3>Gestión de emergencias</h3>
-      <p>Consulta y filtra los incidentes registrados{% if session['usuario']['rol'] != 'administrador' %} en tu municipio{% endif %}.</p>
+      <p>Acepta los reportes, asígnalos a un organismo y haz seguimiento{% if session['usuario']['rol'] != 'administrador' %} en tu municipio{% endif %}.</p>
+      {% endif %}
       <span class="dash-card-tag dash-card-tag-live">Disponible</span>
     </a>
     {% endif %}
 
+    {% if puede('emergencias.consultar') %}
+    <a href="{{ url_for('mapa_emergencias') }}" class="dash-card dash-card-link">
+      <div class="dash-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <h3>Mapa de emergencias</h3>
+      <p>Visualiza en el mapa los incidentes{% if session['usuario']['rol'] == 'organismo_atencion' %} asignados a tu organismo{% else %} activos{% endif %}, su prioridad y su distribución territorial.</p>
+      <span class="dash-card-tag dash-card-tag-live">Disponible</span>
+    </a>
+    {% else %}
     <div class="dash-card">
       <div class="dash-card-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -54,6 +80,7 @@
       <p>Visualiza en el mapa los incidentes activos en los municipios de la Sabana de Occidente.</p>
       <span class="dash-card-tag">Próximamente</span>
     </div>
+    {% endif %}
 
     <div class="dash-card">
       <div class="dash-card-icon">
@@ -63,17 +90,6 @@
       <p>Consulta tendencias por tipo de emergencia, municipio, prioridad y estado.</p>
       <span class="dash-card-tag">Próximamente</span>
     </div>
-
-    {% if puede('emergencias.consultar') %}
-    <div class="dash-card">
-      <div class="dash-card-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </div>
-      <h3>Asignación y seguimiento</h3>
-      <p>Relaciona cada emergencia con los organismos de respuesta y da seguimiento a su estado.</p>
-      <span class="dash-card-tag">Próximamente</span>
-    </div>
-    {% endif %}
 
     {% if puede('usuarios.administrar') %}
     <a href="{{ url_for('admin_usuarios') }}" class="dash-card dash-card-link">

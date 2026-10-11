@@ -3,64 +3,264 @@
 {% block content %}
 
 {% set u = session['usuario'] %}
-{% set iniciales = (u['nombre'][0] ~ u['apellido'][0]) | upper if u.get('apellido') else (u['nombre'][0]) | upper %}
+{% set iniciales = ((u['nombre'][0] ~ u['apellido'][0]) | upper) if u.get('apellido') else (u['nombre'][0] | upper) %}
+{% set meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'] %}
+{% set desde = None %}
+{% if miembro_desde %}{% set p = miembro_desde[:10].split('-') %}{% set desde = (p[2]|int|string) ~ ' de ' ~ meses[p[1]|int - 1] ~ ' de ' ~ p[0] %}{% endif %}
+{% set es_ciudadano = u['rol'] == 'ciudadano' %}
 
-<div class="container">
-  <div class="profile-hero animate-in">
-    <div class="user-bubble user-bubble-xl">
-      {% if u.get('foto_url') %}<img src="{{ backend_url }}{{ u['foto_url'] }}" alt="">{% else %}{{ iniciales }}{% endif %}
+<div class="container pf" id="inicio">
+
+  <!-- ===== Encabezado ===== -->
+  <header class="pf-head animate-in">
+    <div class="pf-cover" aria-hidden="true">
+      <i></i><i></i><i></i>
     </div>
-    <div>
-      <h1 class="dash-title">{{ u['nombre'] }} {{ u['apellido'] }}</h1>
-      <p class="dash-sub">{{ u['email'] }}</p>
-      <span class="role-pill">
-        <svg viewBox="0 0 24 24" fill="none" width="13" height="13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
-        {{ role_label }}
-      </span>
+    <div class="pf-id">
+      <div class="pf-avatar">
+        <div class="user-bubble user-bubble-xl pf-bubble">
+          {% if u.get('foto_url') %}<img src="{{ backend_url }}{{ u['foto_url'] }}" alt="Foto de {{ u['nombre'] }}">{% else %}{{ iniciales }}{% endif %}
+        </div>
+        <form action="{{ url_for('perfil_foto') }}" method="post" enctype="multipart/form-data" class="pf-cam-form">
+          <label for="foto" class="pf-cam" title="Cambiar foto" aria-label="Cambiar foto">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </label>
+          <input type="file" id="foto" name="foto" accept="image/png, image/jpeg, image/webp" onchange="this.form.submit()" hidden>
+        </form>
+      </div>
 
-      <form action="{{ url_for('perfil_foto') }}" method="post" enctype="multipart/form-data" class="profile-photo-form">
-        <label for="foto" class="btn-cta profile-photo-btn">Cambiar foto</label>
-        <input type="file" id="foto" name="foto" accept="image/png, image/jpeg, image/webp"
-               onchange="this.form.submit()" hidden>
-      </form>
+      <div class="pf-who">
+        <h1 class="pf-name">{{ u['nombre'] }} {{ u['apellido'] }}</h1>
+        <p class="pf-mail">{{ u['email'] }}</p>
+        <div class="pf-chips">
+          <span class="pf-chip pf-chip-role">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.5V5l-8-3-8 3v5.5C4 17.5 12 22 12 22z"/></svg>
+            {{ role_label }}
+          </span>
+          {% if u.get('municipio') %}
+          <span class="pf-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            {{ u['municipio'] }}
+          </span>
+          {% endif %}
+          {% if u.get('organismo') %}
+          <span class="pf-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
+            {{ u['organismo'] }}
+          </span>
+          {% endif %}
+          <span class="pf-chip pf-chip-ok"><i></i>Cuenta activa</span>
+        </div>
+      </div>
+
+      <div class="pf-head-actions">
+        {% if u.get('foto_url') %}
+        <form action="{{ url_for('perfil_foto_quitar') }}" method="post">
+          <button type="submit" class="pf-btn pf-btn-ghost">Quitar foto</button>
+        </form>
+        {% endif %}
+        <label for="foto" class="pf-btn pf-btn-soft">Cambiar foto</label>
+      </div>
     </div>
-  </div>
+  </header>
 
-  <div class="profile-grid">
-    <div class="dash-card">
-      <div class="dash-card-icon">
+  <div class="pf-layout">
+
+    <!-- ===== Índice lateral ===== -->
+    <nav class="pf-nav animate-in" aria-label="Secciones del perfil">
+      <a href="#datos" class="is-on" data-pf="datos">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      </div>
-      <h3>Nombre completo</h3>
-      <p>{{ u['nombre'] }} {{ u['apellido'] }}</p>
-    </div>
+        Datos personales
+      </a>
+      <a href="#correo" data-pf="correo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>
+        Correo
+      </a>
+      <a href="#seguridad" data-pf="seguridad">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Contraseña
+      </a>
+      <a href="#sesion" data-pf="sesion">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sesión
+      </a>
+    </nav>
 
-    <div class="dash-card">
-      <div class="dash-card-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg>
-      </div>
-      <h3>Correo</h3>
-      <p>{{ u['email'] }}</p>
-    </div>
+    <div class="pf-main">
 
-    {% if u.get('municipio') %}
-    <div class="dash-card">
-      <div class="dash-card-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      </div>
-      <h3>Municipio</h3>
-      <p>{{ u['municipio'] }}</p>
-    </div>
-    {% endif %}
+      <!-- ===== Datos personales ===== -->
+      <section class="pf-card animate-in" id="datos">
+        <div class="pf-card-head">
+          <h2>Datos personales</h2>
+          <p>Así apareces ante gestores y organismos cuando reportas o atiendes una emergencia.</p>
+        </div>
+        <form action="{{ url_for('perfil_datos') }}" method="post" class="pf-form" autocomplete="on">
+          <div class="pf-row">
+            <label class="pf-field">
+              <span>Nombre</span>
+              <input type="text" name="nombre" value="{{ u['nombre'] }}" maxlength="80" required autocomplete="given-name">
+            </label>
+            <label class="pf-field">
+              <span>Apellido</span>
+              <input type="text" name="apellido" value="{{ u['apellido'] }}" maxlength="80" required autocomplete="family-name">
+            </label>
+          </div>
 
-    <div class="dash-card">
-      <div class="dash-card-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
-      </div>
-      <h3>Rol</h3>
-      <p>{{ role_label }}</p>
+          {% if es_ciudadano %}
+          <label class="pf-field">
+            <span>Municipio donde vives</span>
+            <select name="municipio">
+              {% for m in municipios %}<option value="{{ m }}" {{ 'selected' if m == u.get('municipio') }}>{{ m }}</option>{% endfor %}
+            </select>
+          </label>
+          {% else %}
+          <div class="pf-field pf-readonly">
+            <span>Municipio{% if u.get('organismo') %} y organismo{% endif %}</span>
+            <div class="pf-ro">{{ u.get('municipio') or 'Todos los municipios' }}{% if u.get('organismo') %} · {{ u['organismo'] }}{% endif %}</div>
+            <small>Lo asigna un administrador. Si necesitas cambiarlo, pídeselo a él.</small>
+          </div>
+          {% endif %}
+
+          <dl class="pf-meta">
+            <div><dt>Rol</dt><dd>{{ role_label }}</dd></div>
+            {% if desde %}<div><dt>Miembro desde</dt><dd>{{ desde }}</dd></div>{% endif %}
+          </dl>
+
+          <div class="pf-actions"><button type="submit" class="pf-btn pf-btn-main">Guardar cambios</button></div>
+        </form>
+      </section>
+
+      <!-- ===== Correo ===== -->
+      <section class="pf-card animate-in" id="correo">
+        <div class="pf-card-head">
+          <h2>Correo electrónico</h2>
+          <p>Con este correo ingresas a SIGER. Tu correo actual es <b>{{ u['email'] }}</b>.</p>
+        </div>
+        <form action="{{ url_for('perfil_correo') }}" method="post" class="pf-form">
+          <label class="pf-field">
+            <span>Nuevo correo</span>
+            <input type="email" name="email" placeholder="nuevo@correo.com" maxlength="120" required autocomplete="email" inputmode="email">
+          </label>
+          <label class="pf-field">
+            <span>Contraseña actual</span>
+            <div class="pf-pw">
+              <input type="password" name="password" required autocomplete="current-password" placeholder="Para confirmar que eres tú">
+              <button type="button" class="pf-eye" data-eye aria-label="Mostrar contraseña">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </label>
+          <div class="pf-actions"><button type="submit" class="pf-btn pf-btn-main">Cambiar correo</button></div>
+        </form>
+      </section>
+
+      <!-- ===== Contraseña ===== -->
+      <section class="pf-card animate-in" id="seguridad">
+        <div class="pf-card-head">
+          <h2>Contraseña</h2>
+          <p>Usa mínimo 6 caracteres. Mientras más larga y variada, más segura.</p>
+        </div>
+        <form action="{{ url_for('perfil_password') }}" method="post" class="pf-form" id="pf-form-pw">
+          <label class="pf-field">
+            <span>Contraseña actual</span>
+            <div class="pf-pw">
+              <input type="password" name="actual" required autocomplete="current-password">
+              <button type="button" class="pf-eye" data-eye aria-label="Mostrar contraseña">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </label>
+          <div class="pf-row">
+            <label class="pf-field">
+              <span>Contraseña nueva</span>
+              <div class="pf-pw">
+                <input type="password" name="nueva" id="pf-nueva" required minlength="6" maxlength="128" autocomplete="new-password">
+                <button type="button" class="pf-eye" data-eye aria-label="Mostrar contraseña">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              <div class="pf-meter" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+              <small id="pf-fuerza">Escribe tu nueva contraseña</small>
+            </label>
+            <label class="pf-field">
+              <span>Repite la contraseña nueva</span>
+              <div class="pf-pw">
+                <input type="password" name="confirmar" id="pf-conf" required autocomplete="new-password">
+                <button type="button" class="pf-eye" data-eye aria-label="Mostrar contraseña">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              <small id="pf-igual"></small>
+            </label>
+          </div>
+          <div class="pf-actions"><button type="submit" class="pf-btn pf-btn-main" id="pf-pw-btn">Actualizar contraseña</button></div>
+        </form>
+      </section>
+
+      <!-- ===== Sesión ===== -->
+      <section class="pf-card pf-card-sesion animate-in" id="sesion">
+        <div class="pf-card-head">
+          <h2>Sesión</h2>
+          <p>Cierra tu sesión en este dispositivo, sobre todo si es compartido.</p>
+        </div>
+        <a href="{{ url_for('logout') }}" class="pf-btn pf-btn-danger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Cerrar sesión
+        </a>
+      </section>
     </div>
   </div>
 </div>
+
+<script>
+(function () {
+  // Mostrar / ocultar contraseña
+  document.querySelectorAll("[data-eye]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var i = b.parentElement.querySelector("input"), ver = i.type === "password";
+      i.type = ver ? "text" : "password";
+      b.classList.toggle("is-on", ver);
+      b.setAttribute("aria-label", ver ? "Ocultar contraseña" : "Mostrar contraseña");
+    });
+  });
+
+  // Fuerza de la contraseña nueva y coincidencia
+  var n = document.getElementById("pf-nueva"), c = document.getElementById("pf-conf");
+  var barras = document.querySelectorAll(".pf-meter i"), txt = document.getElementById("pf-fuerza"), igual = document.getElementById("pf-igual");
+  var NIVELES = ["Muy corta", "Débil", "Aceptable", "Buena", "Muy segura"];
+  function puntaje(p) {
+    if (!p) return -1;
+    if (p.length < 6) return 0;
+    var s = 1;
+    if (p.length >= 10) s++;
+    if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++;
+    if (/\d/.test(p) && /[^A-Za-z0-9]/.test(p)) s++;
+    return Math.min(s, 4);
+  }
+  function pintar() {
+    var s = puntaje(n.value);
+    var llenas = s < 0 ? 0 : Math.max(1, s);
+    barras.forEach(function (b, i) { b.className = i < llenas ? "on n" + s : ""; });
+    txt.textContent = s < 0 ? "Escribe tu nueva contraseña" : NIVELES[s];
+    if (c.value) {
+      var ok = c.value === n.value;
+      igual.textContent = ok ? "Coinciden" : "No coinciden";
+      igual.className = ok ? "pf-ok" : "pf-bad";
+    } else { igual.textContent = ""; igual.className = ""; }
+  }
+  n.addEventListener("input", pintar); c.addEventListener("input", pintar);
+
+  // Marca la seccion visible en el indice lateral
+  var links = document.querySelectorAll(".pf-nav a");
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) links.forEach(function (a) { a.classList.toggle("is-on", a.getAttribute("data-pf") === e.target.id); });
+      });
+    }, { rootMargin: "-30% 0px -60% 0px" });
+    ["datos", "correo", "seguridad", "sesion"].forEach(function (id) { io.observe(document.getElementById(id)); });
+  }
+})();
+</script>
 
 {% endblock %}

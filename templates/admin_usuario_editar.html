@@ -63,6 +63,19 @@
         {% endif %}
       </div>
 
+      <div class="lfg" id="grupo-organismo" {% if usuario.rol != 'organismo_atencion' %}style="display:none"{% endif %}>
+        <label class="lfl">Organismo</label>
+        <div class="liw">
+          <select name="organismo_id" id="campo-organismo" class="lfi" style="padding-left:13px">
+            <option value="">Sin organismo</option>
+            {% for o in organismos %}
+            <option value="{{ o.id }}" {% if usuario.organismo_id == o.id %}selected{% endif %}>{{ o.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <small class="lsub">Solo para el rol Organismo de atención: el organismo debe operar en el municipio del usuario. Así verá únicamente lo que le asignen.</small>
+      </div>
+
       <button type="submit" class="lbtn">Guardar cambios</button>
     </form>
 
@@ -71,5 +84,16 @@
     </p>
   </div>
 </div>
+
+<script>
+(function () {
+  var rol = document.querySelector('select[name="rol"]');
+  var grupo = document.getElementById('grupo-organismo');
+  if (!rol || !grupo) return;
+  function mostrar() { grupo.style.display = rol.value === 'organismo_atencion' ? '' : 'none'; }
+  rol.addEventListener('change', mostrar);
+  mostrar();
+})();
+</script>
 
 {% endblock %}

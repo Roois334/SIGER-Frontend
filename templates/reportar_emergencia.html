@@ -65,11 +65,12 @@
             <option value="{{ m.id }}" {% if municipio_sel|string == m.id|string %}selected{% endif %}>{{ m.nombre }}</option>
             {% endfor %}
           </select>
+          <p class="rep-hint" id="hint-municipio"></p>
           <span class="rep-error" id="error-municipio"></span>
         </div>
 
         <div class="rep-field">
-          <label class="rep-label">Punto exacto en el mapa <small></small></label>
+          <label class="rep-label">Punto exacto en el mapa <small>(opcional, pero ayuda mucho)</small></label>
           <div id="mapa-reporte" class="rep-map"></div>
           <div class="rep-map-tools">
             <button type="button" id="btn-ubicacion" class="rep-btn-ghost">
@@ -232,6 +233,64 @@
     return o && o.value ? o.textContent.trim() : "";
   }
 
+  /* ---- Municipio detectado a partir del punto marcado en el mapa ---- */
+  var muniDetectado = "";   // nombre normalizado del municipio donde cae el marcador
+
+  function distKm(a, b) {
+    var t = Math.PI / 180, dLa = (b[0] - a[0]) * t, dLo = (b[1] - a[1]) * t;
+    var h = Math.sin(dLa / 2) * Math.sin(dLa / 2) +
+            Math.cos(a[0] * t) * Math.cos(b[0] * t) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return 2 * 6371 * Math.asin(Math.sqrt(h));
+  }
+  function indiceMunicipio(nombreNorm) {
+    for (var i = 1; i < campoMuni.options.length; i++) {
+      if (norm(campoMuni.options[i].textContent) === nombreNorm) return i;
+    }
+    return -1;
+  }
+  /* Respaldo sin internet: el municipio (de la lista) con el centro mas cercano, a maximo 12 km */
+  function municipioMasCercano(lat, lon) {
+    var mejor = "", dMejor = 1e9;
+    for (var i = 1; i < campoMuni.options.length; i++) {
+      var n = norm(campoMuni.options[i].textContent), c = CENTROS[n];
+      if (!c) continue;
+      var d = distKm([lat, lon], c);
+      if (d < dMejor) { dMejor = d; mejor = n; }
+    }
+    return dMejor <= 12 ? mejor : "";
+  }
+  function mostrarHintMunicipio() {
+    var h = $("hint-municipio");
+    h.className = "rep-hint"; h.textContent = "";
+    if (!latInput.value || !muniDetectado) return;
+    var i = indiceMunicipio(muniDetectado);
+    if (i < 0) return;
+    var nombre = campoMuni.options[i].textContent.trim();
+    if (norm(textoMunicipio()) === muniDetectado) {
+      h.textContent = "Municipio detectado desde el mapa: " + nombre + ".";
+    } else {
+      h.className = "rep-hint rep-hint-warn";
+      h.textContent = "El punto marcado en el mapa está en " + nombre + ". ";
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "rep-link"; b.textContent = "Usar " + nombre;
+      b.addEventListener("click", function () {
+        campoMuni.selectedIndex = i; setError("municipio", "", campoMuni);
+        mostrarHintMunicipio(); actualizarResumen();
+      });
+      h.appendChild(b);
+    }
+  }
+  /* El marcador manda: el municipio se ajusta solo al lugar donde se pone el punto */
+  function aplicarMunicipioDetectado(nombreNorm) {
+    var i = nombreNorm ? indiceMunicipio(nombreNorm) : -1;
+    if (i < 0) return;
+    muniDetectado = nombreNorm;
+    campoMuni.selectedIndex = i;
+    setError("municipio", "", campoMuni);
+    mostrarHintMunicipio();
+    actualizarResumen();
+  }
+
   function actualizarChip() {
     var chip = $("chip-coords");
     var tiene = latInput.value && lonInput.value;
@@ -268,15 +327,20 @@
 
   function quitarPin() {
     latInput.value = ""; lonInput.value = "";
+    muniDetectado = ""; mostrarHintMunicipio();
     if (marcador && mapa) { mapa.removeLayer(marcador); marcador = null; }
     actualizarChip(); actualizarResumen();
   }
 
   /* Autocompleta direccion y municipio con OpenStreetMap (si falla, no pasa nada) */
   function geocodificar(lat, lon) {
+    // Respuesta inmediata (sin internet): municipio mas cercano al punto
+    aplicarMunicipioDetectado(municipioMasCercano(lat, lon));
     var url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=es&lat=" + lat + "&lon=" + lon;
     fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
       if (!d) return;
+      // Si mientras tanto se movio o quito el marcador, se ignora esta respuesta
+      if (!latInput.value || Math.abs(parseFloat(latInput.value) - lat) > 0.0001 || Math.abs(parseFloat(lonInput.value) - lon) > 0.0001) return;
       var a = d.address || {};
       var via = [a.road, a.house_number].filter(Boolean).join(" ");
       var barrio = a.neighbourhood || a.suburb || a.quarter || "";
@@ -288,11 +352,10 @@
         $("hint-direccion").textContent = "Autocompletada desde el mapa. Puedes editarla para agregar más referencias.";
         setError("direccion", "", campoDir);
       }
-      if (!campoMuni.value) {
-        var candidatos = [a.city, a.town, a.village, a.municipality, a.county].filter(Boolean).map(norm);
-        for (var i = 0; i < campoMuni.options.length; i++) {
-          if (candidatos.indexOf(norm(campoMuni.options[i].textContent)) !== -1) { campoMuni.selectedIndex = i; break; }
-        }
+      var candidatos = [a.city, a.town, a.village, a.municipality, a.city_district, a.county].filter(Boolean).map(norm);
+      for (var i = 1; i < campoMuni.options.length; i++) {
+        var n = norm(campoMuni.options[i].textContent);
+        if (candidatos.indexOf(n) !== -1) { aplicarMunicipioDetectado(n); break; }
       }
       actualizarResumen();
     }).catch(function () {});
@@ -341,7 +404,8 @@
       var c = CENTROS[norm(textoMunicipio())];
       if (c) mapa.flyTo(c, 13, { duration: 0.8 });
     }
-    validar.municipio(); actualizarResumen();
+    setError("municipio", campoMuni.value ? "" : "Selecciona el municipio donde ocurre", campoMuni);
+    mostrarHintMunicipio(); actualizarResumen();
   });
 
   /* ------------------------------------------------------------ validaciones */
@@ -354,6 +418,12 @@
     municipio: function () {
       var ok = !!campoMuni.value;
       setError("municipio", ok ? "" : "Selecciona el municipio donde ocurre", campoMuni);
+      if (ok && latInput.value && muniDetectado && norm(textoMunicipio()) !== muniDetectado) {
+        var i = indiceMunicipio(muniDetectado);
+        setError("municipio", "El punto del mapa está en " + (i > 0 ? campoMuni.options[i].textContent.trim() : "otro municipio") +
+                 ". Corrige el municipio o quita el marcador.", campoMuni);
+        return false;
+      }
       return ok;
     },
     direccion: function () {
@@ -547,6 +617,10 @@
 
   /* ------------------------------------------------------------ inicio */
   iniciarMapa();
+  if (latInput.value && lonInput.value) {
+    muniDetectado = municipioMasCercano(parseFloat(latInput.value), parseFloat(lonInput.value));
+    mostrarHintMunicipio();
+  }
   contarDescripcion();
   actualizarChip();
   actualizarResumen();

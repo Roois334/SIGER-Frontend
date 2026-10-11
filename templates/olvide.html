@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Recuperar contraseña — SIGER{% endblock %}
+{% block content %}
+<div class="lw">
+  <div class="lc rc-card animate-in">
+
+    <!-- Progreso -->
+    <ol class="rc-steps" aria-label="Pasos para recuperar la contraseña">
+      <li class="{{ 'is-on' if estado == 'form' else 'is-done' }}"><i>{% if estado != 'form' %}✓{% else %}1{% endif %}</i><span>Tu correo</span></li>
+      <li class="{{ 'is-on' if estado == 'enviado' }}"><i>2</i><span>Revisa tu bandeja</span></li>
+      <li><i>3</i><span>Nueva contraseña</span></li>
+    </ol>
+
+    {% if estado == 'form' %}
+    <div class="rc-hero">
+      <div class="rc-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15L19 4M18 5l2 2M15 8l2 2"/></svg>
+      </div>
+      <h1 class="ltitle">¿Olvidaste tu contraseña?</h1>
+      <p class="lsub rc-sub">Escribe el correo de tu cuenta y te enviamos un enlace para crear una nueva.</p>
+    </div>
+
+    <form method="POST" novalidate>
+      <div class="lfg">
+        <label class="lfl" for="rc-email">Correo electrónico</label>
+        <div class="liw">
+          <svg class="lic" viewBox="0 0 24 24" fill="none" width="15" height="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+          <input type="email" name="email" id="rc-email" class="lfi" value="{{ email }}" placeholder="tu@correo.com" autocomplete="email" inputmode="email" required autofocus>
+        </div>
+      </div>
+      <button type="submit" class="lbtn">
+        <svg viewBox="0 0 24 24" fill="none" width="16" height="16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        Enviarme el enlace
+      </button>
+    </form>
+    <div class="lfoot"><a href="{{ url_for('login') }}" class="lalink">← Volver a ingresar</a></div>
+
+    {% else %}
+    <div class="rc-hero">
+      <div class="rc-icon rc-icon-mail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>
+      </div>
+      <h1 class="ltitle">Revisa tu correo</h1>
+      <p class="lsub rc-sub">Si <b class="rc-email">{{ email }}</b> tiene una cuenta en SIGER, ya te enviamos el enlace para crear una nueva contraseña.</p>
+    </div>
+
+    {% if es_gmail %}
+    <a href="https://mail.google.com/mail/u/0/#inbox" target="_blank" rel="noopener" class="lbtn rc-gmail">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#fff" d="M2 6.5A2.5 2.5 0 0 1 4.5 4h15A2.5 2.5 0 0 1 22 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-15A2.5 2.5 0 0 1 2 17.5v-11zm2.2.3l7.8 6.1 7.8-6.1-.5-.8H4.7l-.5.8z"/></svg>
+      Abrir Gmail
+    </a>
+    {% endif %}
+
+    <ul class="rc-tips">
+      <li>El enlace vence en <b>30 minutos</b> y se usa una sola vez.</li>
+      <li>Si no lo ves, mira en <b>Spam</b> o <b>Promociones</b>.</li>
+      <li>El correo llega de <b>SIGER</b>.</li>
+    </ul>
+
+    <form method="POST" class="rc-resend">
+      <input type="hidden" name="email" value="{{ email }}">
+      <span id="rc-count" aria-live="polite"></span>
+      <button type="submit" id="rc-btn" class="rc-link" disabled>Reenviar correo</button>
+    </form>
+    <div class="lfoot"><a href="{{ url_for('olvide_password', nuevo=1) }}" class="lalink">Usar otro correo</a> · <a href="{{ url_for('login') }}" class="lalink">Volver a ingresar</a></div>
+
+    <script>
+    (function () {
+      var t = 45, btn = document.getElementById("rc-btn"), c = document.getElementById("rc-count");
+      function tick() {
+        if (t <= 0) { c.textContent = "¿No te llegó?"; btn.disabled = false; return; }
+        c.textContent = "Podrás reenviarlo en " + t + " s"; t--; setTimeout(tick, 1000);
+      }
+      tick();
+    })();
+    </script>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -2,7 +2,7 @@
 import time
 from datetime import datetime
 import requests
-from flask import Flask, render_template, request, redirect, url_for, session, flash, Response, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, Response, abort, jsonify
 from config import Config
 from utilities.decorators import login_required, admin_required, permiso_required
 from utilities.permisos import puede, tiene_alcance_municipal
@@ -147,6 +147,67 @@ def login():
     return render_template("login.html")
 
 
+@app.route("/olvide-password", methods=["GET", "POST"])
+def olvide_password():
+    """Paso 1: el usuario escribe su correo y el backend le envia el enlace (Gmail)."""
+    if "usuario" in session:
+        return redirect(url_for("perfil", _anchor="seguridad"))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        try:
+            r = requests.post(BACKEND_URL + "/api/auth/olvide-password", json={"email": email}, timeout=10)
+        except requests.exceptions.ConnectionError:
+            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            return render_template("olvide.html", estado="form", email=email)
+        if r.status_code != 200:
+            flash(r.json().get("error", "No se pudo enviar el correo"), "error")
+            return render_template("olvide.html", estado="form", email=email)
+        session["reset_email"] = email
+        return redirect(url_for("olvide_password", enviado=1))
+
+    email = session.get("reset_email", "")
+    if request.args.get("nuevo"):
+        session.pop("reset_email", None)
+        email = ""
+    elif request.args.get("enviado") and email:
+        dominio = email.rsplit("@", 1)[-1]
+        return render_template("olvide.html", estado="enviado", email=email,
+                                es_gmail=dominio in ("gmail.com", "googlemail.com"))
+    return render_template("olvide.html", estado="form", email="")
+
+
+@app.route("/restablecer/<token>", methods=["GET", "POST"])
+def restablecer_password(token):
+    """Paso 2: el enlace del correo abre esta pantalla para crear la nueva contrasena."""
+    if request.method == "POST":
+        nueva = request.form.get("nueva", "")
+        if nueva != request.form.get("confirmar", ""):
+            flash("Las contrasenas no coinciden", "error")
+            return redirect(url_for("restablecer_password", token=token))
+        try:
+            r = requests.post(BACKEND_URL + "/api/auth/restablecer", json={"token": token, "nueva": nueva}, timeout=8)
+        except requests.exceptions.ConnectionError:
+            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            return redirect(url_for("restablecer_password", token=token))
+        if r.status_code == 200:
+            session.pop("reset_email", None)
+            flash("Contrasena actualizada. Ya puedes ingresar con la nueva", "success")
+            return redirect(url_for("login"))
+        flash(r.json().get("error", "No se pudo restablecer la contrasena"), "error")
+        return redirect(url_for("restablecer_password", token=token))
+
+    try:
+        r = requests.get(BACKEND_URL + f"/api/auth/restablecer/{token}", timeout=8)
+    except requests.exceptions.ConnectionError:
+        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        return render_template("restablecer.html", valido=False)
+    if r.status_code != 200:
+        return render_template("restablecer.html", valido=False)
+    info = r.json()
+    return render_template("restablecer.html", valido=True, email=info.get("email"), minutos=info.get("minutos"))
+
+
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
     if "usuario" in session:
@@ -195,8 +256,71 @@ def dashboard():
 @app.route("/perfil")
 @login_required
 def perfil():
-    return render_template("perfil.html",
+    miembro_desde = None
+    try:
+        r = requests.get(BACKEND_URL + "/api/usuarios/me", headers=_auth_headers(), timeout=5)
+        if r.status_code == 200:
+            datos = r.json()["usuario"]
+            session["usuario"] = datos
+            miembro_desde = datos.get("fecha_creacion")
+    except requests.exceptions.ConnectionError:
+        pass
+    return render_template("perfil.html", miembro_desde=miembro_desde,
+                            municipios=MUNICIPIOS_SABANA_OCCIDENTE,
                             role_label=ROLE_LABELS.get(session["usuario"]["rol"], session["usuario"]["rol"]))
+
+
+def _perfil_accion(metodo, ruta, payload, mensaje_ok, ancla):
+    """Llama al backend para un cambio del perfil y vuelve a la misma seccion con un aviso."""
+    destino = url_for("perfil", _anchor=ancla)
+    try:
+        r = requests.request(metodo, BACKEND_URL + ruta, json=payload, headers=_auth_headers(), timeout=8)
+    except requests.exceptions.ConnectionError:
+        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        return redirect(destino)
+    if r.status_code == 200:
+        session["usuario"] = r.json()["usuario"]
+        flash(mensaje_ok, "success")
+    else:
+        try:
+            flash(r.json().get("error", "No se pudo guardar el cambio"), "error")
+        except ValueError:
+            flash("No se pudo guardar el cambio", "error")
+    return redirect(destino)
+
+
+@app.route("/perfil/datos", methods=["POST"])
+@login_required
+def perfil_datos():
+    payload = {"nombre": request.form.get("nombre", ""), "apellido": request.form.get("apellido", "")}
+    if "municipio" in request.form:
+        payload["municipio"] = request.form.get("municipio", "")
+    return _perfil_accion("PUT", "/api/usuarios/me", payload, "Tus datos se guardaron", "datos")
+
+
+@app.route("/perfil/correo", methods=["POST"])
+@login_required
+def perfil_correo():
+    payload = {"email": request.form.get("email", ""), "password": request.form.get("password", "")}
+    return _perfil_accion("PUT", "/api/usuarios/me/email", payload,
+                          "Correo actualizado. Desde ahora ingresas con el nuevo", "correo")
+
+
+@app.route("/perfil/password", methods=["POST"])
+@login_required
+def perfil_password():
+    nueva = request.form.get("nueva", "")
+    if nueva != request.form.get("confirmar", ""):
+        flash("La confirmacion no coincide con la contrasena nueva", "error")
+        return redirect(url_for("perfil", _anchor="seguridad"))
+    payload = {"actual": request.form.get("actual", ""), "nueva": nueva}
+    return _perfil_accion("PUT", "/api/usuarios/me/password", payload, "Contrasena actualizada", "seguridad")
+
+
+@app.route("/perfil/foto/quitar", methods=["POST"])
+@login_required
+def perfil_foto_quitar():
+    return _perfil_accion("DELETE", "/api/usuarios/me/foto", None, "Foto eliminada", "inicio")
 
 
 @app.route("/perfil/foto", methods=["POST"])
@@ -260,6 +384,7 @@ def admin_usuario_editar(user_id):
             "email": request.form.get("email", "").strip().lower(),
             "municipio": request.form.get("municipio", ""),
             "rol": request.form.get("rol", ""),
+            "organismo_id": request.form.get("organismo_id", ""),
         }
         try:
             r = requests.put(BACKEND_URL + f"/api/usuarios/{user_id}",
@@ -287,8 +412,14 @@ def admin_usuario_editar(user_id):
         return redirect(url_for("admin_usuarios"))
 
     usuario = r.json()["usuario"]
+    try:
+        r_org = requests.get(BACKEND_URL + "/api/organismos", headers=_auth_headers(),
+                              params={"estado": "activo"}, timeout=5)
+        organismos = r_org.json().get("organismos", []) if r_org.status_code == 200 else []
+    except requests.exceptions.ConnectionError:
+        organismos = []
     return render_template("admin_usuario_editar.html",
-                            usuario=usuario, role_labels=ROLE_LABELS,
+                            usuario=usuario, role_labels=ROLE_LABELS, organismos=organismos,
                             municipios=MUNICIPIOS_SABANA_OCCIDENTE,
                             es_mi_cuenta=(usuario["id"] == session["usuario"]["id"]))
 
@@ -552,11 +683,10 @@ PRIORIDAD_LABELS = {
 
 ESTADO_LABELS = {
     "pendiente": "Pendiente",
-    "validado": "Validado",
     "asignado": "Asignado",
     "en_atencion": "En atención",
-    "atendido": "Atendido",
-    "cerrado": "Cerrado",
+    "resuelto": "Resuelto",
+    "descartado": "Descartado",
 }
 
 
@@ -681,6 +811,58 @@ def reporte_detalle(reporte_id):
                             prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
 
 
+def _accion_reporte(reporte_id, metodo_url, payload, mensaje_ok):
+    """Llama al backend (asignar / cambiar estado) y vuelve al detalle con un aviso."""
+    try:
+        r = requests.post(BACKEND_URL + f"/api/reportes/{reporte_id}/{metodo_url}",
+                          json=payload, headers=_auth_headers(), timeout=8)
+    except requests.exceptions.ConnectionError:
+        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        return redirect(url_for("reporte_detalle", reporte_id=reporte_id))
+
+    if r.status_code == 200:
+        flash(mensaje_ok, "success")
+    else:
+        try:
+            flash(r.json().get("error", "No se pudo completar la accion"), "error")
+        except ValueError:
+            flash("No se pudo completar la accion", "error")
+    return redirect(url_for("reporte_detalle", reporte_id=reporte_id))
+
+
+@app.route("/reportes/<int:reporte_id>/asignar", methods=["POST"])
+@permiso_required("reportes.asignar")
+def reporte_asignar(reporte_id):
+    """El gestor acepta el reporte y lo asigna (o reasigna) a un organismo."""
+    payload = {
+        "organismo_id": request.form.get("organismo_id", type=int),
+        "prioridad": request.form.get("prioridad", "").strip(),
+        "comentario": request.form.get("comentario", "").strip(),
+    }
+    return _accion_reporte(reporte_id, "asignar", payload,
+                           "Reporte aceptado y asignado. El organismo ya puede verlo")
+
+
+MENSAJES_ACCION = {
+    "iniciar": "Atención iniciada. El ciudadano puede ver el avance",
+    "resolver": "Reporte marcado como resuelto",
+    "devolver": "Reporte devuelto al gestor municipal",
+    "descartar": "Reporte descartado",
+}
+
+
+@app.route("/reportes/<int:reporte_id>/estado", methods=["POST"])
+@login_required
+def reporte_estado(reporte_id):
+    """Acciones: iniciar / resolver / devolver (organismo) y descartar (gestor). El backend valida."""
+    accion = request.form.get("accion", "")
+    if accion not in MENSAJES_ACCION:
+        flash("Accion no valida", "error")
+        return redirect(url_for("reporte_detalle", reporte_id=reporte_id))
+    payload = {"accion": accion, "comentario": request.form.get("comentario", "").strip()}
+    return _accion_reporte(reporte_id, "estado", payload, MENSAJES_ACCION[accion])
+
+
 @app.route("/evidencias/<int:evidencia_id>")
 @login_required
 def ver_evidencia(evidencia_id):
@@ -707,10 +889,64 @@ def ver_evidencia(evidencia_id):
     return respuesta
 
 
+@app.route("/mapa")
+@permiso_required("mapa.ver")
+def mapa_emergencias():
+    """Mapa de emergencias (todos los roles; cada uno ve lo que le corresponde)."""
+    rol = session["usuario"]["rol"]
+    alcance_municipal = tiene_alcance_municipal(rol)
+    municipios = MUNICIPIOS_SABANA_OCCIDENTE
+    tipos = [t["nombre"] for t in _config_reporte()["tipos"]]
+    return render_template("mapa_emergencias.html", municipios=municipios, tipos=tipos,
+                            alcance_municipal=alcance_municipal, es_organismo=(rol == "organismo_atencion"),
+                            es_ciudadano=(rol == "ciudadano"),
+                            prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
+
+
+@app.route("/mapa/datos")
+@permiso_required("mapa.ver")
+def mapa_datos():
+    """
+    JSON liviano para el mapa (se consulta cada 30 s). El backend ya filtra por rol:
+    el gestor ve su municipio y el organismo solo lo que le asignaron.
+    """
+    try:
+        # El ciudadano ve sus propios reportes; los demas roles, los de su alcance
+        ruta = "/api/reportes" if session["usuario"]["rol"] == "ciudadano" else "/api/reportes/gestion"
+        r = requests.get(BACKEND_URL + ruta, headers=_auth_headers(), timeout=8)
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "No se pudo conectar con el servidor"}), 503
+
+    if r.status_code in (401, 422):
+        return jsonify({"error": "Tu sesion expiro. Ingresa de nuevo"}), 401
+    if r.status_code != 200:
+        try:
+            mensaje = r.json().get("error", "No se pudieron cargar las emergencias")
+        except ValueError:
+            mensaje = "No se pudieron cargar las emergencias"
+        return jsonify({"error": mensaje}), (r.status_code if r.status_code in (400, 403) else 502)
+
+    reportes = []
+    for x in r.json().get("reportes", []):
+        reportes.append({
+            "id": x["id"], "folio": x["folio"], "tipo": x["tipo"], "tipo_nombre": filtro_tipo_bonito(x["tipo"]),
+            "prioridad": x["prioridad"], "estado": x["estado"],
+            "latitud": x.get("latitud"), "longitud": x.get("longitud"),
+            "direccion": x["direccion"], "municipio": x.get("municipio"),
+            "fecha_hora": x.get("fecha_hora"), "organismo": x.get("organismo"),
+            "afectados": x.get("afectados", 0),
+            "descripcion": (x.get("descripcion") or "")[:160],
+        })
+    respuesta = jsonify({"reportes": reportes})
+    respuesta.headers["Cache-Control"] = "no-store"
+    return respuesta
+
+
 @app.route("/gestion/emergencias")
 @permiso_required("emergencias.consultar")
 def gestion_emergencias():
     alcance_municipal = tiene_alcance_municipal(session["usuario"]["rol"])
+    es_organismo = session["usuario"]["rol"] == "organismo_atencion"
     filtros = {
         "q": request.args.get("q", "").strip(),
         "tipo": request.args.get("tipo", ""),
@@ -724,6 +960,7 @@ def gestion_emergencias():
     def mostrar(reportes, municipios):
         return render_template("gestion_emergencias.html", reportes=reportes, municipios=municipios,
                                 tipos=tipos, filtros=filtros, alcance_municipal=alcance_municipal,
+                                es_organismo=es_organismo,
                                 prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
 
     try:
@@ -739,6 +976,92 @@ def gestion_emergencias():
 
     municipios = r_mun.json().get("municipios", []) if r_mun.status_code == 200 else []
     return mostrar(r_rep.json().get("reportes", []), municipios)
+
+
+# ---------------------------------------------------------------------------
+# Informacion de los organismos de atencion (pagina informativa para todos)
+# ---------------------------------------------------------------------------
+TIPOS_FILTRO_ORGANISMOS = [
+    ("incendio", "Incendio"),
+    ("inundacion", "Inundación"),
+    ("transito", "Accidente de tránsito"),
+    ("deslizamiento", "Deslizamiento"),
+    ("fuga", "Fuga o derrame"),
+    ("medica", "Emergencia médica"),
+]
+
+ORGANISMOS_INFO = [
+    {"clave": "bomberos", "nombre": "Bomberos", "icono": "llama", "linea": "119",
+     "resumen": "Combaten incendios y realizan rescates y control de emergencias con materiales peligrosos.",
+     "funciones": ["Apagan incendios en viviendas, comercios y zonas rurales",
+                   "Rescatan personas atrapadas en accidentes o estructuras",
+                   "Controlan fugas de gas y sustancias peligrosas"],
+     "cuando": "Humo o llamas, olor fuerte a gas, personas atrapadas.",
+     "tipos": ["incendio", "fuga", "transito"]},
+    {"clave": "cruzroja", "nombre": "Cruz Roja Colombiana", "icono": "cruz", "linea": "132",
+     "resumen": "Brinda primeros auxilios, atención prehospitalaria y ayuda humanitaria a las familias afectadas.",
+     "funciones": ["Atienden heridos y personas en riesgo de salud",
+                   "Apoyan con ambulancias y socorro en accidentes",
+                   "Entregan ayuda humanitaria tras una emergencia"],
+     "cuando": "Personas lesionadas, familias damnificadas, necesidad de primeros auxilios.",
+     "tipos": ["transito", "medica", "inundacion", "deslizamiento"]},
+    {"clave": "defensacivil", "nombre": "Defensa Civil Colombiana", "icono": "escudo", "linea": "144",
+     "resumen": "Apoya el rescate y la atención de desastres naturales y la evacuación de comunidades.",
+     "funciones": ["Rescatan personas en inundaciones y deslizamientos",
+                   "Evacúan y asisten a comunidades en riesgo",
+                   "Apoyan la búsqueda y el salvamento"],
+     "cuando": "Crecientes de ríos, derrumbes, personas aisladas o desaparecidas.",
+     "tipos": ["inundacion", "deslizamiento"]},
+    {"clave": "policia", "nombre": "Policía Nacional", "icono": "placa", "linea": "123",
+     "resumen": "Garantiza la seguridad y el orden público en el lugar de la emergencia.",
+     "funciones": ["Aseguran la zona y controlan el acceso",
+                   "Atienden riñas, robos y situaciones de violencia",
+                   "Apoyan accidentes con presencia de riesgo"],
+     "cuando": "Hay riesgo para la seguridad de las personas o disturbios.",
+     "tipos": ["transito"]},
+    {"clave": "salud", "nombre": "Secretaría de Salud y Ambulancias", "icono": "pulso", "linea": "123",
+     "resumen": "Atiende emergencias médicas y coordina el traslado de pacientes al hospital.",
+     "funciones": ["Atienden urgencias médicas con ambulancia",
+                   "Trasladan heridos a centros de salud",
+                   "Coordinan la atención hospitalaria"],
+     "cuando": "Pérdida de conciencia, dificultad para respirar, heridas graves.",
+     "tipos": ["medica", "transito"]},
+    {"clave": "transito", "nombre": "Tránsito y Transporte", "icono": "carro", "linea": None,
+     "resumen": "Gestiona la movilidad y atiende los accidentes y bloqueos en las vías.",
+     "funciones": ["Atienden accidentes y levantan el informe",
+                   "Regulan el tráfico y habilitan rutas alternas",
+                   "Retiran vehículos que obstruyen la vía"],
+     "cuando": "Choques, vías bloqueadas, vehículos varados que ponen en riesgo.",
+     "tipos": ["transito"]},
+    {"clave": "gestionriesgo", "nombre": "Gestión del Riesgo", "icono": "alerta", "linea": None,
+     "resumen": "Coordina la prevención y respuesta ante desastres en el municipio.",
+     "funciones": ["Evalúan zonas de riesgo y emiten alertas",
+                   "Coordinan a los demás organismos de respuesta",
+                   "Gestionan ayudas y albergues temporales"],
+     "cuando": "Inundaciones, deslizamientos, vendavales o zonas inestables.",
+     "tipos": ["inundacion", "deslizamiento"]},
+    {"clave": "servicios", "nombre": "Empresas de Servicios Públicos", "icono": "rayo", "linea": None,
+     "resumen": "Atienden daños y fugas en las redes de gas, agua y energía.",
+     "funciones": ["Reparan fugas de gas y daños en redes",
+                   "Restablecen el servicio de agua y energía",
+                   "Cortan el suministro cuando hay peligro"],
+     "cuando": "Olor a gas, cables caídos, tuberías rotas.",
+     "tipos": ["fuga"]},
+    {"clave": "ambiental", "nombre": "Autoridad Ambiental (CAR)", "icono": "hoja", "linea": None,
+     "resumen": "Protege el medio ambiente y actúa ante incendios forestales y contaminación.",
+     "funciones": ["Atienden incendios de cobertura vegetal",
+                   "Controlan derrames y contaminación de fuentes de agua",
+                   "Evalúan el daño ambiental"],
+     "cuando": "Incendios en cerros o bosques, derrames en ríos o suelos.",
+     "tipos": ["incendio", "fuga"]},
+]
+
+
+@app.route("/organismos")
+@login_required
+def organismos_info():
+    return render_template("organismos_info.html", organismos=ORGANISMOS_INFO,
+                           tipos_filtro=TIPOS_FILTRO_ORGANISMOS)
 
 
 @app.route("/logout")
