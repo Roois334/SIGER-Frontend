@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+{% block title %}Mapa de emergencias — SIGER{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="dash-hero animate-in">
+    <div class="pg-crumbs"><a href="{{ url_for('dashboard') }}">Panel</a><span>/</span><span>Mapa de emergencias</span></div>
+    <h1 class="dash-title">Mapa de emergencias</h1>
+    <p class="dash-sub">
+      {% if es_organismo %}Ubicación de las emergencias que el gestor asignó a tu organismo.
+      {% elif es_ciudadano %}Ubicación y estado de las emergencias que has reportado. Elige un municipio para ir a él.
+      {% else %}Ubicación, prioridad y estado de los incidentes para ver su distribución en el territorio.{% endif %}
+    </p>
+  </div>
+
+  <!-- Prioridades (clic para mostrar u ocultar) + estado de la actualización -->
+  <div class="mp-bar animate-in">
+    <div class="mp-prios" role="group" aria-label="Filtrar por prioridad">
+      {% for clave in ['critica', 'alta', 'media', 'baja'] %}
+      <button type="button" class="mp-prio mp-prio-{{ clave }} is-on" data-prio="{{ clave }}" aria-pressed="true">
+        <i></i><span>{{ prioridad_labels[clave] }}</span><b data-count="{{ clave }}">0</b>
+      </button>
+      {% endfor %}
+    </div>
+    <div class="mp-live">
+      <span class="mp-live-dot" id="mp-dot"></span>
+      <span id="mp-estado">Cargando…</span>
+      <button type="button" class="rep-btn-ghost" id="mp-refrescar" title="Actualizar ahora">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Actualizar
+      </button>
+      <label class="mp-switch" title="Actualizar automáticamente cada 30 segundos">
+        <input type="checkbox" id="mp-auto" checked><span></span>Auto
+      </label>
+    </div>
+  </div>
+
+  <div class="mp-filters animate-in">
+    <input type="search" id="f-q" class="rep-input" placeholder="Buscar por código, tipo o dirección…" autocomplete="off">
+    <select id="f-tipo" class="rep-input">
+      <option value="">Todos los tipos</option>
+      {% for t in tipos %}<option value="{{ t }}">{{ t|tipo_bonito }}</option>{% endfor %}
+    </select>
+    <select id="f-estado" class="rep-input">
+      <option value="activas">Solo activas</option>
+      <option value="todas">Todos los estados</option>
+      {% for valor, etiqueta in estado_labels.items() %}<option value="{{ valor }}">{{ etiqueta }}</option>{% endfor %}
+    </select>
+    <select id="f-municipio" class="rep-input" aria-label="Ir a un municipio">
+      <option value="">Toda la región</option>
+      {% for m in municipios %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+    </select>
+    <button type="button" class="rep-btn-ghost" id="f-limpiar">Limpiar</button>
+  </div>
+
+  <div class="mp-layout">
+    <div class="mp-map-wrap animate-in">
+      <div id="mapa-emergencias" class="mp-map"></div>
+
+      <div class="mp-legend">
+        <b>Leyenda</b>
+        <span><i class="mk-dot mk-critica"></i>Crítica</span>
+        <span><i class="mk-dot mk-alta"></i>Alta</span>
+        <span><i class="mk-dot mk-media"></i>Media</span>
+        <span><i class="mk-dot mk-baja"></i>Baja</span>
+        <span><i class="mk-dot mk-off"></i>Resuelta / descartada</span>
+      </div>
+      <button type="button" class="mp-center" id="mp-centrar" title="Ver todas las emergencias">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+        Centrar
+      </button>
+      <div class="mp-empty" id="mp-vacio" hidden></div>
+    </div>
+
+    <aside class="mp-side animate-in">
+      <div class="mp-side-head">
+        <h2>Emergencias <span id="mp-total">0</span></h2>
+        <select id="f-orden" class="rep-input" aria-label="Ordenar">
+          <option value="prioridad">Mayor prioridad</option>
+          <option value="reciente">Más recientes</option>
+        </select>
+      </div>
+      <div class="mp-munis" id="mp-munis" hidden></div>
+      <ul class="mp-list" id="mp-lista"></ul>
+    </aside>
+  </div>
+</div>
+
+<div class="mp-toast" id="mp-toast" role="status" aria-live="polite" hidden></div>
+
+<script type="application/json" id="mp-cfg">{{ {"datos": url_for('mapa_datos'), "detalle": url_for('reporte_detalle', reporte_id=0), "login": url_for('login'), "prioridades": prioridad_labels, "estados": estado_labels}|tojson }}</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var CFG = JSON.parse(document.getElementById("mp-cfg").textContent);
+  var INTERVALO = 30000;
+  var ACTIVAS = ["pendiente", "asignado", "en_atencion"];
+  var ORDEN_PRIO = { critica: 0, alta: 1, media: 2, baja: 3 };
+  var TAM = { critica: 46, alta: 42, media: 38, baja: 34 };
+  var $ = function (id) { return document.getElementById(id); };
+  var norm = function (s) { return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim(); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+
+  /* ---------------------------------------------------------- iconos por tipo */
+  var ICONOS = {
+    incendio: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+    inundacion: '<path d="M12 2.7s6 6.1 6 10.3a6 6 0 0 1-12 0c0-4.2 6-10.3 6-10.3z"/>',
+    transito: '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+    deslizamiento: '<path d="m8 3 4 8 5-5 5 15H2L8 3z"/>',
+    fuga: '<path d="M10 2v7.5a2 2 0 0 1-.2.9L4.7 20.5a1 1 0 0 0 .9 1.5h12.8a1 1 0 0 0 .9-1.5l-5.1-10.1a2 2 0 0 1-.2-.9V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/>',
+    medica: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+    otro: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
+  };
+  function claveTipo(t) {
+    t = norm(t);
+    if (t.indexOf("incendio") > -1) return "incendio";
+    if (t.indexOf("inundac") > -1) return "inundacion";
+    if (t.indexOf("transito") > -1) return "transito";
+    if (t.indexOf("deslizamiento") > -1) return "deslizamiento";
+    if (t.indexOf("fuga") > -1 || t.indexOf("derrame") > -1) return "fuga";
+    if (t.indexOf("medica") > -1) return "medica";
+    return "otro";
+  }
+  function svg(tipo, tam) {
+    return '<svg viewBox="0 0 24 24" width="' + tam + '" height="' + tam + '" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONOS[claveTipo(tipo)] + "</svg>";
+  }
+
+  /* ---------------------------------------------------------- fechas (hora de Colombia) */
+  var MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  function partes(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(iso || "");
+    return m ? m.slice(1).map(Number) : null;
+  }
+  function fmtFecha(iso) {
+    var p = partes(iso); if (!p) return "—";
+    var h = p[3] % 12 || 12, ampm = p[3] >= 12 ? "p. m." : "a. m.";
+    return p[2] + " " + MESES[p[1] - 1] + " " + p[0] + " · " + h + ":" + String(p[4]).padStart(2, "0") + " " + ampm;
+  }
+  function hace(iso) {
+    var p = partes(iso); if (!p) return "";
+    // La hora guardada es de Colombia (UTC-5, sin horario de verano)
+    var t = Date.UTC(p[0], p[1] - 1, p[2], p[3] + 5, p[4], p[5] || 0);
+    var min = Math.max(0, Math.round((Date.now() - t) / 60000));
+    if (min < 1) return "ahora";
+    if (min < 60) return "hace " + min + " min";
+    if (min < 1440) return "hace " + Math.floor(min / 60) + " h";
+    return "hace " + Math.floor(min / 1440) + " d";
+  }
+  function horaActual() {
+    var d = new Date();
+    var h = d.getHours() % 12 || 12;
+    return h + ":" + String(d.getMinutes()).padStart(2, "0") + ":" + String(d.getSeconds()).padStart(2, "0") + " " + (d.getHours() >= 12 ? "p. m." : "a. m.");
+  }
+
+  /* ---------------------------------------------------------- estado de la pagina */
+  var todos = [];
+  var conocidos = null;           // ids vistos (para avisar de reportes nuevos)
+  var marcadores = {};            // id -> { marker, firma }
+  var seleccionId = null;
+  var primeraCarga = true;
+  var mapa = null, capaMarcadores = null, capaBase = null, errTiles = 0;
+  var auto = true, timer = null, ultimaCarga = 0, cargando = false;
+  var filtros = { prio: { critica: true, alta: true, media: true, baja: true }, q: "", tipo: "", estado: "activas", municipio: "", orden: "prioridad" };
+
+  try {
+    var g = JSON.parse(localStorage.getItem("siger-mapa") || "null");
+    if (g) {
+      if (g.prio) Object.keys(filtros.prio).forEach(function (k) { if (typeof g.prio[k] === "boolean") filtros.prio[k] = g.prio[k]; });
+      if (g.estado) filtros.estado = g.estado;
+      if (g.orden) filtros.orden = g.orden;
+      if (typeof g.auto === "boolean") auto = g.auto;
+    }
+  } catch (e) {}
+  function guardar() {
+    try { localStorage.setItem("siger-mapa", JSON.stringify({ prio: filtros.prio, estado: filtros.estado, orden: filtros.orden, auto: auto })); } catch (e) {}
+  }
+
+  /* ---------------------------------------------------------- mapa */
+  var BASES = {
+    dark: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    light: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+  };
+  function temaActual() { return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark"; }
+  function ponerBase(clave) {
+    if (!mapa) return;
+    if (capaBase) mapa.removeLayer(capaBase);
+    capaBase = L.tileLayer(BASES[clave], {
+      subdomains: "abc", maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    });
+    capaBase.on("tileerror", function () {
+      // Si el mapa base elegido no carga, se usa OpenStreetMap
+      errTiles++;
+    });
+    capaBase.addTo(mapa);
+  }
+
+  function iniciarMapa() {
+    var cont = $("mapa-emergencias");
+    if (!window.L) {
+      cont.innerHTML = '<div class="rep-map-fallback">No se pudo cargar el mapa. Revisa tu conexión a internet; la lista de la derecha sigue funcionando.</div>';
+      $("mp-centrar").style.display = "none";
+      return;
+    }
+    mapa = L.map("mapa-emergencias", {
+      maxBounds: L.latLngBounds([4.3, -75.0], [5.3, -73.8]), maxBoundsViscosity: 0.8, minZoom: 9, zoomControl: true
+    }).setView([4.78, -74.28], 11);
+    ponerBase(temaActual());
+    capaMarcadores = L.layerGroup().addTo(mapa);
+
+    // Si el usuario cambia el tema claro/oscuro, cambia tambien el mapa base
+    new MutationObserver(function () { errTiles = 0; ponerBase(temaActual()); })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    setTimeout(function () { mapa.invalidateSize(); }, 250);
+  }
+
+  function tieneCoord(r) { return r.latitud != null && r.longitud != null && isFinite(r.latitud) && isFinite(r.longitud); }
+  function activa(r) { return ACTIVAS.indexOf(r.estado) !== -1; }
+
+  function iconoDe(r) {
+    var t = TAM[r.prioridad] || 36, on = activa(r);
+    var pulso = on && r.prioridad === "critica" && r.estado === "pendiente";
+    var html = '<div class="mk mk-' + esc(r.prioridad) + (on ? "" : " is-off") + (pulso ? " is-pulse" : "") + '" style="--s:' + t + 'px"><span>' + svg(r.tipo, Math.round(t * 0.46)) + "</span></div>";
+    return L.divIcon({ className: "mk-wrap", html: html, iconSize: [t, t], iconAnchor: [t / 2, t * 1.2], popupAnchor: [0, -t * 1.1] });
+  }
+
+  function popupHtml(r) {
+    return '<div class="pp">' +
+      '<div class="pp-head"><span class="pp-ico mk-' + esc(r.prioridad) + '">' + svg(r.tipo, 18) + '</span>' +
+      '<div><b>' + esc(r.tipo_nombre || r.tipo) + '</b><a class="pp-folio" href="' + esc(CFG.detalle.replace(/0$/, r.id)) + '">' + esc(r.folio) + "</a></div></div>" +
+      '<div class="pp-pills"><span class="pill pill-' + esc(r.prioridad) + '">' + esc(CFG.prioridades[r.prioridad] || r.prioridad) + '</span>' +
+      '<span class="pill pill-st-' + esc(r.estado) + '">' + esc(CFG.estados[r.estado] || r.estado) + "</span></div>" +
+      '<dl class="pp-dl">' +
+      "<div><dt>Dirección</dt><dd>" + esc(r.direccion) + "</dd></div>" +
+      "<div><dt>Municipio</dt><dd>" + esc(r.municipio || "—") + "</dd></div>" +
+      "<div><dt>Reportada</dt><dd>" + esc(fmtFecha(r.fecha_hora)) + " <small>(" + esc(hace(r.fecha_hora)) + ")</small></dd></div>" +
+      (r.organismo ? "<div><dt>Organismo</dt><dd>" + esc(r.organismo) + "</dd></div>" : "") +
+      "<div><dt>Afectados</dt><dd>" + esc(r.afectados) + "</dd></div></dl>" +
+      (r.descripcion ? '<p class="pp-desc">' + esc(r.descripcion) + "</p>" : "") +
+      '<a class="pp-btn" href="' + esc(CFG.detalle.replace(/0$/, r.id)) + '">Ver detalle completo →</a></div>';
+  }
+
+  /* ---------------------------------------------------------- filtros */
+  function pasaOtros(r) {
+    if (filtros.tipo && r.tipo !== filtros.tipo) return false;
+    if (filtros.municipio && !mismoMuni(r.municipio, filtros.municipio)) return false;
+    if (filtros.estado === "activas") { if (!activa(r)) return false; }
+    else if (filtros.estado !== "todas" && r.estado !== filtros.estado) return false;
+    if (filtros.q) {
+      var q = norm(filtros.q);
+      if (norm(r.folio + " " + r.tipo + " " + (r.tipo_nombre || "") + " " + r.direccion + " " + (r.municipio || "")).indexOf(q) === -1) return false;
+    }
+    return true;
+  }
+  function visibles() {
+    return todos.filter(function (r) { return pasaOtros(r) && filtros.prio[r.prioridad] !== false; }).sort(function (a, b) {
+      if (filtros.orden === "prioridad") {
+        var d = (ORDEN_PRIO[a.prioridad] || 9) - (ORDEN_PRIO[b.prioridad] || 9);
+        if (d) return d;
+      }
+      return (b.fecha_hora || "").localeCompare(a.fecha_hora || "");
+    });
+  }
+
+  /* ---------------------------------------------------------- pintado */
+  function pintarContadores() {
+    var base = todos.filter(pasaOtros), c = { critica: 0, alta: 0, media: 0, baja: 0 };
+    base.forEach(function (r) { if (c[r.prioridad] != null) c[r.prioridad]++; });
+    Object.keys(c).forEach(function (k) {
+      var b = document.querySelector('[data-count="' + k + '"]'); if (b) b.textContent = c[k];
+    });
+  }
+
+  function sincronizarMarcadores(lista) {
+    if (!mapa) return;
+    var ids = {};
+    lista.forEach(function (r) {
+      if (!tieneCoord(r)) return;
+      ids[r.id] = true;
+      var firma = [r.prioridad, r.estado, r.tipo, r.latitud, r.longitud].join("|");
+      var m = marcadores[r.id];
+      if (!m) {
+        var mk = L.marker([r.latitud, r.longitud], { icon: iconoDe(r), riseOnHover: true, keyboard: true, title: (r.tipo_nombre || r.tipo) + " · " + r.folio });
+        mk.bindPopup(popupHtml(r), { maxWidth: 320, minWidth: 250, className: "mp-popup", autoPanPadding: [30, 30] });
+        mk.on("click", function () { seleccionar(r.id, false); });
+        capaMarcadores.addLayer(mk);
+        marcadores[r.id] = { marker: mk, firma: firma };
+      } else {
+        if (m.firma !== firma) {
+          m.marker.setIcon(iconoDe(r)); m.marker.setLatLng([r.latitud, r.longitud]); m.firma = firma;
+        }
+        m.marker.getPopup().setContent(popupHtml(r));  // refresca hora relativa y datos
+        if (!capaMarcadores.hasLayer(m.marker)) capaMarcadores.addLayer(m.marker);
+      }
+    });
+    Object.keys(marcadores).forEach(function (id) {
+      if (!ids[id]) {
+        capaMarcadores.removeLayer(marcadores[id].marker);
+        if (!todos.some(function (r) { return String(r.id) === id; })) delete marcadores[id];
+      }
+    });
+  }
+
+  function pintarLista(lista, nuevos) {
+    var ul = $("mp-lista");
+    $("mp-total").textContent = lista.length;
+    if (!lista.length) {
+      ul.innerHTML = '<li class="mp-list-empty">' + (todos.length ? "Ninguna emergencia coincide con los filtros." : "Aún no hay emergencias registradas.") + "</li>";
+      return;
+    }
+    ul.innerHTML = lista.map(function (r) {
+      var sin = !tieneCoord(r);
+      return '<li><button type="button" class="mp-item mk-' + esc(r.prioridad) + (String(r.id) === String(seleccionId) ? " is-sel" : "") + (nuevos && nuevos[r.id] ? " is-new" : "") + (activa(r) ? "" : " is-off") + '" data-id="' + r.id + '">' +
+        '<span class="mp-item-ico">' + svg(r.tipo, 18) + "</span>" +
+        '<span class="mp-item-body"><b>' + esc(r.tipo_nombre || r.tipo) + (nuevos && nuevos[r.id] ? ' <em>Nueva</em>' : "") + "</b>" +
+        "<small>" + esc(r.folio) + " · " + esc(r.municipio || "—") + "</small>" +
+        "<small>" + esc((r.direccion || "").slice(0, 46)) + "</small>" +
+        '<span class="mp-item-meta"><span class="pill pill-st-' + esc(r.estado) + '">' + esc(CFG.estados[r.estado] || r.estado) + "</span><time>" + esc(hace(r.fecha_hora)) + "</time>" + (sin ? '<span class="mp-sin">Sin ubicación</span>' : "") + "</span></span></button></li>";
+    }).join("");
+  }
+
+  function pintarMunicipios(lista) {
+    var cont = $("mp-munis"), c = {};
+    lista.forEach(function (r) { var k = r.municipio || "—"; c[k] = (c[k] || 0) + 1; });
+    var claves = Object.keys(c).sort(function (a, b) { return c[b] - c[a]; });
+    if (claves.length < 2) { cont.hidden = true; return; }
+    var max = c[claves[0]];
+    cont.hidden = false;
+    cont.innerHTML = "<h3>Por municipio</h3>" + claves.slice(0, 8).map(function (k) {
+      return '<div class="mp-muni"><span>' + esc(k) + '</span><div><i style="width:' + Math.max(6, Math.round(c[k] / max * 100)) + '%"></i></div><b>' + c[k] + "</b></div>";
+    }).join("");
+  }
+
+  function pintarVacio(lista) {
+    var v = $("mp-vacio"), conCoord = lista.filter(tieneCoord).length;
+    if (conCoord) { v.hidden = true; return; }
+    v.hidden = false;
+    v.innerHTML = lista.length
+      ? "<b>Estas emergencias no tienen ubicación en el mapa</b><span>El ciudadano no marcó un punto exacto. Puedes verlas en la lista.</span>"
+      : "<b>No hay emergencias para mostrar</b><span>" + (todos.length ? "Prueba cambiando los filtros." : "Cuando se registren, aparecerán aquí.") + "</span>";
+  }
+
+  /* Centro de cada municipio (el filtro lleva el mapa hasta alli) */
+  var CENTROS = {
+    facatativa: [4.8136, -74.3544], madrid: [4.7323, -74.2632], mosquera: [4.7059, -74.2303],
+    funza: [4.7168, -74.2117], bojaca: [4.7378, -74.3428], "el rosal": [4.8517, -74.2630],
+    subachoque: [4.9294, -74.1736], zipacon: [4.7578, -74.3794]
+  };
+  function mismoMuni(a, b) { return norm(a) === norm(b); }
+
+  function irMunicipio() {
+    if (!mapa) return;
+    var c = CENTROS[norm(filtros.municipio)];
+    if (!c) { ajustar(); return; }
+    mapa.flyTo(c, 13, { duration: 0.9 });
+  }
+
+  function ajustar() {
+    if (!mapa) return;
+    var pts = Object.keys(marcadores).filter(function (id) { return capaMarcadores.hasLayer(marcadores[id].marker); })
+      .map(function (id) { return marcadores[id].marker.getLatLng(); });
+    if (!pts.length) return;
+    if (pts.length === 1) mapa.setView(pts[0], 15);
+    else mapa.fitBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 15 });
+  }
+
+  function aplicar(opts) {
+    opts = opts || {};
+    var lista = visibles();
+    pintarContadores();
+    sincronizarMarcadores(lista);
+    pintarLista(lista, opts.nuevos);
+    pintarMunicipios(lista);
+    pintarVacio(lista);
+    if (opts.ajustar) ajustar();
+  }
+
+  /* ---------------------------------------------------------- seleccion */
+  function seleccionar(id, volar) {
+    seleccionId = id;
+    document.querySelectorAll(".mp-item").forEach(function (b) { b.classList.toggle("is-sel", b.getAttribute("data-id") === String(id)); });
+    var sel = document.querySelector('.mp-item[data-id="' + id + '"]');
+    if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    var m = marcadores[id];
+    if (volar && m && mapa) {
+      mapa.flyTo(m.marker.getLatLng(), Math.max(mapa.getZoom(), 15), { duration: 0.7 });
+      setTimeout(function () { m.marker.openPopup(); }, 400);
+    }
+  }
+
+  /* ---------------------------------------------------------- datos en vivo */
+  function estado(texto, clase) {
+    $("mp-estado").textContent = texto;
+    $("mp-dot").className = "mp-live-dot " + (clase || "");
+  }
+  function avisar(texto) {
+    var t = $("mp-toast"); t.textContent = texto; t.hidden = false;
+    clearTimeout(avisar._t); avisar._t = setTimeout(function () { t.hidden = true; }, 6000);
+  }
+
+  function cargar(manual) {
+    if (cargando) return;
+    cargando = true;
+    if (manual) estado("Actualizando…", "is-wait");
+    fetch(CFG.datos, { headers: { Accept: "application/json" }, credentials: "same-origin", cache: "no-store" })
+      .then(function (r) {
+        var json = (r.headers.get("content-type") || "").indexOf("application/json") !== -1;
+        if (r.redirected || r.status === 401 || !json) { window.location = CFG.login; throw new Error("sesion"); }
+        return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+      })
+      .then(function (x) {
+        if (!x.ok) throw new Error(x.d.error || "Error al cargar");
+        todos = x.d.reportes || [];
+        var nuevos = {}, cuantos = 0;
+        if (conocidos) todos.forEach(function (r) { if (!conocidos[r.id]) { nuevos[r.id] = true; cuantos++; } });
+        conocidos = {}; todos.forEach(function (r) { conocidos[r.id] = true; });
+        aplicar({ ajustar: primeraCarga, nuevos: cuantos ? nuevos : null });
+        primeraCarga = false;
+        ultimaCarga = Date.now();
+        estado("Actualizado " + horaActual(), auto ? "is-live" : "is-pause");
+        if (cuantos) {
+          avisar(cuantos === 1 ? "Llegó 1 emergencia nueva" : "Llegaron " + cuantos + " emergencias nuevas");
+          setTimeout(function () { document.querySelectorAll(".mp-item.is-new").forEach(function (b) { b.classList.remove("is-new"); }); }, 9000);
+        }
+      })
+      .catch(function (e) {
+        if (e.message === "sesion") return;
+        estado(todos.length ? "Sin conexión. Mostrando los últimos datos…" : (e.message || "No se pudo cargar"), "is-error");
+      })
+      .then(function () { cargando = false; });
+  }
+
+  function programar() {
+    clearInterval(timer);
+    if (auto) timer = setInterval(function () { if (!document.hidden) cargar(false); }, INTERVALO);
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && auto && Date.now() - ultimaCarga > INTERVALO) cargar(false);
+  });
+
+  /* ---------------------------------------------------------- eventos */
+  document.querySelectorAll(".mp-prio").forEach(function (b) {
+    filtros.prio[b.getAttribute("data-prio")] !== false || (b.classList.remove("is-on"), b.setAttribute("aria-pressed", "false"));
+    b.addEventListener("click", function () {
+      var k = b.getAttribute("data-prio"), on = !filtros.prio[k];
+      filtros.prio[k] = on; b.classList.toggle("is-on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
+      guardar(); aplicar({ ajustar: true });
+    });
+  });
+  var tq;
+  $("f-q").addEventListener("input", function () { clearTimeout(tq); tq = setTimeout(function () { filtros.q = $("f-q").value; aplicar({ ajustar: true }); }, 200); });
+  $("f-tipo").addEventListener("change", function () { filtros.tipo = this.value; aplicar({ ajustar: true }); });
+  $("f-estado").addEventListener("change", function () { filtros.estado = this.value; guardar(); aplicar({ ajustar: true }); });
+  if ($("f-municipio")) $("f-municipio").addEventListener("change", function () { filtros.municipio = this.value; aplicar({}); irMunicipio(); });
+  $("f-orden").addEventListener("change", function () { filtros.orden = this.value; guardar(); aplicar({}); });
+  $("f-limpiar").addEventListener("click", function () {
+    filtros.q = ""; filtros.tipo = ""; filtros.estado = "activas"; filtros.municipio = "";
+    Object.keys(filtros.prio).forEach(function (k) { filtros.prio[k] = true; });
+    document.querySelectorAll(".mp-prio").forEach(function (b) { b.classList.add("is-on"); b.setAttribute("aria-pressed", "true"); });
+    $("f-q").value = ""; $("f-tipo").value = ""; $("f-estado").value = "activas"; if ($("f-municipio")) $("f-municipio").value = "";
+    guardar(); aplicar({ ajustar: true });
+  });
+  $("mp-centrar").addEventListener("click", ajustar);
+  $("mp-refrescar").addEventListener("click", function () { cargar(true); });
+  $("mp-auto").addEventListener("change", function () {
+    auto = this.checked; guardar(); programar();
+    estado(auto ? "Actualización automática activada" : "Actualización automática en pausa", auto ? "is-live" : "is-pause");
+  });
+  $("mp-lista").addEventListener("click", function (e) {
+    var b = e.target.closest(".mp-item"); if (!b) return;
+    var id = b.getAttribute("data-id"), r = todos.filter(function (x) { return String(x.id) === id; })[0];
+    if (r && tieneCoord(r)) seleccionar(id, true);
+    else if (r) window.location = CFG.detalle.replace(/0$/, r.id);
+  });
+
+  /* ---------------------------------------------------------- inicio */
+  $("f-estado").value = filtros.estado; $("f-orden").value = filtros.orden; $("mp-auto").checked = auto;
+  iniciarMapa();
+  cargar(true);
+  programar();
+})();
+</script>
+{% endblock %}

@@ -51,8 +51,14 @@
                 {% if puede('reportes.ver_propios') %}
                 <a href="{{ url_for('mis_reportes') }}" class="nav-menu-item {{ 'active' if request.path == url_for('mis_reportes') }}">Mis reportes</a>
                 {% endif %}
+                {% if puede('mapa.ver') %}
+                <a href="{{ url_for('mapa_emergencias') }}" class="nav-menu-item {{ 'active' if request.path == url_for('mapa_emergencias') }}">Mapa de emergencias</a>
+                {% endif %}
+                {% if not puede('usuarios.administrar') %}
+                <a href="{{ url_for('organismos_info') }}" class="nav-menu-item {{ 'active' if request.path == url_for('organismos_info') }}">Organismos de atención</a>
+                {% endif %}
                 {% if puede('emergencias.consultar') %}
-                <a href="{{ url_for('gestion_emergencias') }}" class="nav-menu-item {{ 'active' if request.path == url_for('gestion_emergencias') }}">Gestión de emergencias</a>
+                <a href="{{ url_for('gestion_emergencias') }}" class="nav-menu-item {{ 'active' if request.path == url_for('gestion_emergencias') }}">{{ 'Emergencias asignadas' if session['usuario']['rol'] == 'organismo_atencion' else 'Gestión de emergencias' }}</a>
                 {% endif %}
                 {% if puede('usuarios.administrar') %}
                 <div class="nav-menu-sep"></div>

@@ -10,15 +10,16 @@
 
 {% block content %}
 {% set tiene_mapa = reporte.latitud is not none and reporte.longitud is not none %}
-{% set orden = ['pendiente','validado','asignado','en_atencion','atendido','cerrado'] %}
-{% set n = orden.index(reporte.estado) if reporte.estado in orden else 0 %}
+{% set n = {'pendiente': 0, 'asignado': 1, 'en_atencion': 2, 'resuelto': 3}.get(reporte.estado, 0) %}
+{% set descartado = reporte.estado == 'descartado' %}
 {% set pasos = [
   ('Reporte recibido', 'El incidente quedó registrado en el sistema.'),
-  ('Validación', 'Un responsable revisa y clasifica el reporte.'),
-  ('Asignación', 'Se relaciona con el organismo de respuesta.'),
+  ('Aceptado y asignado', ('Un gestor lo aceptó y lo asignó a ' ~ reporte.organismo ~ '.') if reporte.organismo else 'El gestor del municipio lo revisará y lo asignará a un organismo.'),
   ('En atención', 'El organismo está atendiendo la emergencia.'),
-  ('Atendido', 'La emergencia fue atendida y cerrada.')
+  ('Resuelto', 'La emergencia fue atendida.')
 ] %}
+{% set accion_txt = {'asignar': 'Aceptado y asignado', 'reasignar': 'Reasignado', 'iniciar': 'Atención iniciada', 'resolver': 'Marcado como resuelto', 'devolver': 'Devuelto al gestor', 'descartar': 'Reporte descartado'} %}
+{% set ac = reporte.acciones or {} %}
 {% set es_staff = session['usuario']['rol'] != 'ciudadano' %}
 
 <div class="container">
@@ -51,7 +52,8 @@
       </div>
       <div class="det-head-meta">
         <span class="pill pill-{{ reporte.prioridad }}">Prioridad {{ prioridad_labels.get(reporte.prioridad, reporte.prioridad)|lower }}</span>
-        <span class="pill {{ 'pill-estado' if reporte.estado == 'pendiente' else 'pill-estado-ok' }}">{{ estado_labels.get(reporte.estado, reporte.estado) }}</span>
+        <span class="pill pill-st-{{ reporte.estado }}">{{ estado_labels.get(reporte.estado, reporte.estado) }}</span>
+        {% if reporte.organismo %}<span class="pill pill-org">{{ reporte.organismo }}</span>{% endif %}
       </div>
     </div>
     <div class="det-head-actions">
@@ -64,6 +66,99 @@
 
   <div class="det-layout">
     <div class="det-col">
+      {% if ac.asignar or ac.descartar or ac.iniciar or ac.devolver or ac.resolver %}
+      <section class="det-card act-card animate-in" id="panel-acciones">
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.5V5l-8-3-8 3v5.5C4 17.5 12 22 12 22z"/><path d="M9 12l2 2 4-4"/></svg>{{ 'Atender esta emergencia' if (ac.iniciar or ac.resolver or ac.devolver) else 'Gestionar este reporte' }}</h3>
+
+        {% if ac.asignar %}
+        <p class="act-help">
+          {% if reporte.estado == 'pendiente' %}Revisa el reporte. Si es válido, <b>acéptalo asignándolo a un organismo</b>: solo desde ese momento el organismo podrá verlo.
+          {% else %}Asignado a <b>{{ reporte.organismo }}</b>. Aún no inicia la atención, así que puedes reasignarlo a otro organismo.{% endif %}
+        </p>
+        {% if reporte.organismos_disponibles %}
+        <form method="POST" action="{{ url_for('reporte_asignar', reporte_id=reporte.id) }}" class="act-form">
+          <div class="act-row">
+            <div class="rep-field">
+              <label class="rep-label" for="act-org">Organismo *</label>
+              <select class="rep-input" id="act-org" name="organismo_id" required>
+                <option value="">Selecciona un organismo…</option>
+                {% for o in reporte.organismos_disponibles %}
+                <option value="{{ o.id }}" {% if o.id == reporte.organismo_id %}selected{% endif %}>{{ o.nombre }}{% if o.sugerido %} ★ sugerido{% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="rep-field">
+              <label class="rep-label" for="act-prio">Prioridad</label>
+              <select class="rep-input" id="act-prio" name="prioridad">
+                {% for v, l in prioridad_labels.items() %}<option value="{{ v }}" {% if v == reporte.prioridad %}selected{% endif %}>{{ l }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="rep-field">
+            <label class="rep-label" for="act-com">Indicaciones para el organismo <small>(opcional)</small></label>
+            <textarea class="rep-input act-text" id="act-com" name="comentario" maxlength="250" placeholder="Ej: Hay una persona herida, ingresar por la calle 5."></textarea>
+          </div>
+          <button type="submit" class="btn-cta act-btn">{{ 'Reasignar organismo' if reporte.estado == 'asignado' else 'Aceptar y asignar' }}</button>
+        </form>
+        {% else %}
+        <p class="det-empty">No hay organismos activos que operen en {{ reporte.municipio }}. Pide al administrador que asocie alguno a este municipio.</p>
+        {% endif %}
+        {% endif %}
+
+        {% if ac.iniciar %}
+        <p class="act-help">El gestor de tu municipio te asignó esta emergencia. Acéptala para comenzar la atención; el ciudadano verá el avance.</p>
+        <form method="POST" action="{{ url_for('reporte_estado', reporte_id=reporte.id) }}" class="act-form">
+          <input type="hidden" name="accion" value="iniciar">
+          <div class="rep-field">
+            <label class="rep-label" for="act-ini">Nota <small>(opcional)</small></label>
+            <textarea class="rep-input act-text" id="act-ini" name="comentario" maxlength="250" placeholder="Ej: Unidad en camino, llegada estimada 10 minutos."></textarea>
+          </div>
+          <button type="submit" class="btn-cta act-btn">Aceptar y comenzar atención</button>
+        </form>
+        {% endif %}
+
+        {% if ac.resolver %}
+        <p class="act-help">Cuando la emergencia esté controlada, ciérrala dejando un resumen de lo realizado.</p>
+        <form method="POST" action="{{ url_for('reporte_estado', reporte_id=reporte.id) }}" class="act-form">
+          <input type="hidden" name="accion" value="resolver">
+          <div class="rep-field">
+            <label class="rep-label" for="act-res">Resumen de la atención <small>(opcional)</small></label>
+            <textarea class="rep-input act-text" id="act-res" name="comentario" maxlength="250" placeholder="Ej: Se controló el incendio y no hubo heridos."></textarea>
+          </div>
+          <button type="submit" class="btn-cta act-btn">Marcar como resuelto</button>
+        </form>
+        {% endif %}
+
+        {% if ac.devolver %}
+        <details class="act-more">
+          <summary>No puedo atender este reporte</summary>
+          <form method="POST" action="{{ url_for('reporte_estado', reporte_id=reporte.id) }}" class="act-form">
+            <input type="hidden" name="accion" value="devolver">
+            <div class="rep-field">
+              <label class="rep-label" for="act-dev">Motivo *</label>
+              <textarea class="rep-input act-text" id="act-dev" name="comentario" required minlength="5" maxlength="250" placeholder="Ej: No tenemos unidades disponibles en este momento."></textarea>
+            </div>
+            <button type="submit" class="act-btn act-danger" onclick="return confirm('¿Devolver este reporte al gestor municipal?');">Devolver al gestor</button>
+          </form>
+        </details>
+        {% endif %}
+
+        {% if ac.descartar %}
+        <details class="act-more">
+          <summary>Descartar reporte (falsa alarma o duplicado)</summary>
+          <form method="POST" action="{{ url_for('reporte_estado', reporte_id=reporte.id) }}" class="act-form">
+            <input type="hidden" name="accion" value="descartar">
+            <div class="rep-field">
+              <label class="rep-label" for="act-desc">Motivo *</label>
+              <textarea class="rep-input act-text" id="act-desc" name="comentario" required minlength="5" maxlength="250" placeholder="Ej: Reporte duplicado de RPT-2026-00002."></textarea>
+            </div>
+            <button type="submit" class="act-btn act-danger" onclick="return confirm('¿Descartar este reporte? El ciudadano verá que fue descartado.');">Descartar reporte</button>
+          </form>
+        </details>
+        {% endif %}
+      </section>
+      {% endif %}
+
       <section class="det-card animate-in">
         <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>Descripción del incidente</h3>
         <p class="det-desc">{{ reporte.descripcion }}</p>
@@ -118,6 +213,10 @@
           <div><dt>Municipio</dt><dd>{{ reporte.municipio or '—' }}</dd></div>
           <div><dt>Personas afectadas</dt><dd>{{ reporte.afectados }}</dd></div>
           <div><dt>Prioridad</dt><dd><span class="pill pill-{{ reporte.prioridad }}">{{ prioridad_labels.get(reporte.prioridad, reporte.prioridad) }}</span></dd></div>
+          <div><dt>Estado</dt><dd><span class="pill pill-st-{{ reporte.estado }}">{{ estado_labels.get(reporte.estado, reporte.estado) }}</span></dd></div>
+          <div><dt>Organismo asignado</dt><dd>{{ reporte.organismo or 'Sin asignar' }}</dd></div>
+          {% if reporte.fecha_asignacion %}<div><dt>Asignado el</dt><dd>{{ reporte.fecha_asignacion|fecha_hora }}</dd></div>{% endif %}
+          {% if es_staff and reporte.asignado_por %}<div><dt>Asignado por</dt><dd>{{ reporte.asignado_por }}</dd></div>{% endif %}
           {% if es_staff and reporte.ciudadano %}<div><dt>Reportado por</dt><dd>{{ reporte.ciudadano }}</dd></div>{% endif %}
         </dl>
       </section>
@@ -125,13 +224,32 @@
       <section class="det-card animate-in">
         <h3>Seguimiento</h3>
         <ol class="det-steps">
-          {% for titulo, texto in pasos %}
+          {% for titulo, texto in (pasos[:1] if descartado else pasos) %}
           <li class="{{ 'is-done' if loop.index0 <= n else ('is-now' if loop.index0 == n + 1 else '') }}">
             <i>{% if loop.index0 <= n %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{% else %}{{ loop.index }}{% endif %}</i>
             <div><b>{{ titulo }}</b><small>{{ texto }}</small></div>
           </li>
           {% endfor %}
+          {% if descartado %}
+          <li class="is-bad">
+            <i>×</i>
+            <div><b>Reporte descartado</b><small>El gestor revisó el reporte y lo descartó.</small></div>
+          </li>
+          {% endif %}
         </ol>
+
+        {% if reporte.historial %}
+        <h4 class="det-sub">Historial</h4>
+        <ul class="det-hist">
+          {% for h in reporte.historial|reverse %}
+          <li>
+            <div class="det-hist-top"><b>{{ accion_txt.get(h.accion, h.accion) }}</b><time>{{ h.fecha|fecha_hora }}</time></div>
+            {% if h.autor %}<small>por {{ h.autor }}</small>{% endif %}
+            {% if h.comentario %}<p>{{ h.comentario }}</p>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
       </section>
     </div>
   </div>

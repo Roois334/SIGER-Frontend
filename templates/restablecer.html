@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Nueva contraseña — SIGER{% endblock %}
+{% block content %}
+<div class="lw">
+  <div class="lc rc-card animate-in">
+
+    {% if valido %}
+    <ol class="rc-steps" aria-label="Pasos para recuperar la contraseña">
+      <li class="is-done"><i>✓</i><span>Tu correo</span></li>
+      <li class="is-done"><i>✓</i><span>Revisa tu bandeja</span></li>
+      <li class="is-on"><i>3</i><span>Nueva contraseña</span></li>
+    </ol>
+
+    <div class="rc-hero">
+      <div class="rc-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+      </div>
+      <h1 class="ltitle">Crea tu nueva contraseña</h1>
+      <p class="lsub rc-sub">Cuenta: <b class="rc-email">{{ email }}</b></p>
+    </div>
+
+    <form method="POST" id="rc-form">
+      <div class="lfg">
+        <label class="lfl" for="rc-nueva">Contraseña nueva</label>
+        <div class="liw">
+          <svg class="lic" viewBox="0 0 24 24" fill="none" width="15" height="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input type="password" name="nueva" id="rc-nueva" class="lfi lfi-r" placeholder="Mínimo 6 caracteres" minlength="6" maxlength="128" autocomplete="new-password" required autofocus>
+          <button type="button" class="leye" data-eye aria-label="Mostrar contraseña">
+            <svg viewBox="0 0 24 24" fill="none" width="16" height="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="pf-meter rc-meter" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <small class="rc-hint" id="rc-fuerza">Escribe tu nueva contraseña</small>
+      </div>
+      <div class="lfg">
+        <label class="lfl" for="rc-conf">Repite la contraseña</label>
+        <div class="liw">
+          <svg class="lic" viewBox="0 0 24 24" fill="none" width="15" height="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <input type="password" name="confirmar" id="rc-conf" class="lfi lfi-r" autocomplete="new-password" required>
+          <button type="button" class="leye" data-eye aria-label="Mostrar contraseña">
+            <svg viewBox="0 0 24 24" fill="none" width="16" height="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <small class="rc-hint" id="rc-igual"></small>
+      </div>
+      <button type="submit" class="lbtn">Guardar nueva contraseña</button>
+    </form>
+    <div class="lfoot">Este enlace vence en unos {{ minutos }} min.</div>
+
+    <script>
+    (function () {
+      document.querySelectorAll("[data-eye]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var i = b.parentElement.querySelector("input"); i.type = i.type === "password" ? "text" : "password";
+        });
+      });
+      var n = document.getElementById("rc-nueva"), c = document.getElementById("rc-conf"),
+          barras = document.querySelectorAll(".rc-meter i"), txt = document.getElementById("rc-fuerza"), ig = document.getElementById("rc-igual");
+      var NIV = ["Muy corta", "Débil", "Aceptable", "Buena", "Muy segura"];
+      function puntaje(p) {
+        if (!p) return -1; if (p.length < 6) return 0;
+        var s = 1; if (p.length >= 10) s++; if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++; if (/\d/.test(p) && /[^A-Za-z0-9]/.test(p)) s++;
+        return Math.min(s, 4);
+      }
+      function pintar() {
+        var s = puntaje(n.value), llenas = s < 0 ? 0 : Math.max(1, s);
+        barras.forEach(function (b, i) { b.className = i < llenas ? "on n" + s : ""; });
+        txt.textContent = s < 0 ? "Escribe tu nueva contraseña" : NIV[s];
+        if (c.value) { var ok = c.value === n.value; ig.textContent = ok ? "Coinciden" : "No coinciden"; ig.className = "rc-hint " + (ok ? "pf-ok" : "pf-bad"); }
+        else { ig.textContent = ""; }
+      }
+      n.addEventListener("input", pintar); c.addEventListener("input", pintar);
+    })();
+    </script>
+
+    {% else %}
+    <div class="rc-hero">
+      <div class="rc-icon rc-icon-warn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 2"/></svg>
+      </div>
+      <h1 class="ltitle">Este enlace ya no sirve</h1>
+      <p class="lsub rc-sub">Venció o ya se usó. Por seguridad cada enlace dura 30 minutos y se puede usar una sola vez.</p>
+    </div>
+    <a href="{{ url_for('olvide_password', nuevo=1) }}" class="lbtn rc-gmail">Pedir un enlace nuevo</a>
+    <div class="lfoot"><a href="{{ url_for('login') }}" class="lalink">← Volver a ingresar</a></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

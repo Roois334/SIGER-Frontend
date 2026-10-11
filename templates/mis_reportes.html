@@ -54,7 +54,7 @@
           <td>{{ r.municipio or "—" }}</td>
           <td>{{ r.fecha_hora|fecha_hora }}</td>
           <td><span class="pill pill-{{ r.prioridad }}">{{ prioridad_labels.get(r.prioridad, r.prioridad) }}</span></td>
-          <td><span class="pill {{ 'pill-estado' if r.estado == 'pendiente' else 'pill-estado-ok' }}">{{ estado_labels.get(r.estado, r.estado) }}</span></td>
+          <td><span class="pill pill-st-{{ r.estado }}">{{ estado_labels.get(r.estado, r.estado) }}</span></td>
           <td>{{ r.evidencias|length if r.evidencias else '—' }}</td>
           <td><a href="{{ url_for('reporte_detalle', reporte_id=r.id) }}" class="adm-btn adm-btn-edit">Ver detalle</a></td>
         </tr>

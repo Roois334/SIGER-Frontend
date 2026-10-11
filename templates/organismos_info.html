@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Organismos de atención — SIGER{% endblock %}
+
+{% macro ico(nombre) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if nombre == 'llama' -%}<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+{%- elif nombre == 'cruz' -%}<path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/>
+{%- elif nombre == 'escudo' -%}<path d="M12 22s8-4.5 8-11.5V5l-8-3-8 3v5.5C4 17.5 12 22 12 22z"/><path d="M9 12l2 2 4-4"/>
+{%- elif nombre == 'placa' -%}<path d="M12 2l2.5 2.2 3.3-.3.9 3.2 2.8 1.8-1.1 3.1 1.1 3.1-2.8 1.8-.9 3.2-3.3-.3L12 22l-2.5-2.2-3.3.3-.9-3.2-2.8-1.8 1.1-3.1-1.1-3.1 2.8-1.8.9-3.2 3.3.3z"/><path d="M12 8.5l1 2 2.2.3-1.6 1.5.4 2.2-2-1.1-2 1.1.4-2.2-1.6-1.5 2.2-.3z"/>
+{%- elif nombre == 'pulso' -%}<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+{%- elif nombre == 'carro' -%}<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>
+{%- elif nombre == 'alerta' -%}<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+{%- elif nombre == 'rayo' -%}<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+{%- elif nombre == 'hoja' -%}<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+{%- else -%}<circle cx="12" cy="12" r="10"/>{%- endif -%}
+</svg>
+{%- endmacro %}
+
+{% block content %}
+<div class="container">
+  <div class="dash-hero animate-in">
+    <div class="pg-crumbs"><a href="{{ url_for('dashboard') }}">Panel</a><span>/</span><span>Organismos de atención</span></div>
+    <h1 class="dash-title">Organismos de atención</h1>
+    <p class="dash-sub">Conoce quién responde a cada tipo de emergencia y para qué sirve cada organismo.</p>
+  </div>
+
+  <div class="org-alert animate-in">
+    <div class="org-alert-ico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    </div>
+    <div>
+      <b>¿Hay peligro inmediato para la vida?</b>
+      <p>Llama primero a la línea única de emergencias <strong>123</strong>. SIGER sirve para registrar y dar seguimiento a la emergencia, no reemplaza la llamada de auxilio.</p>
+    </div>
+  </div>
+
+  <h2 class="org-h2">¿Cómo funciona la atención?</h2>
+  <ol class="org-flow animate-in">
+    <li><span>1</span><b>Tú reportas</b><p>Registras la emergencia con su ubicación, descripción y evidencias.</p></li>
+    <li><span>2</span><b>El gestor la revisa</b><p>El gestor de tu municipio valida el reporte y define su prioridad.</p></li>
+    <li><span>3</span><b>Se asigna un organismo</b><p>Se coordina con el organismo que corresponde según el tipo de emergencia.</p></li>
+    <li><span>4</span><b>Se atiende y se cierra</b><p>El organismo acude, atiende y el reporte pasa a resuelto.</p></li>
+  </ol>
+
+  <h2 class="org-h2">¿Quién atiende cada emergencia?</h2>
+  <div class="org-chips" role="group" aria-label="Filtrar por tipo de emergencia">
+    <button type="button" class="org-chip is-active" data-filtro="todos">Todos</button>
+    {% for clave, etiqueta in tipos_filtro %}
+    <button type="button" class="org-chip" data-filtro="{{ clave }}">{{ etiqueta }}</button>
+    {% endfor %}
+  </div>
+
+  <div class="org-grid">
+    {% for o in organismos %}
+    <article class="org-card animate-in" data-tipos="{{ o.tipos|join(' ') }}">
+      <header class="org-card-head">
+        <div class="org-card-ico">{{ ico(o.icono) }}</div>
+        <div>
+          <h3>{{ o.nombre }}</h3>
+          {% if o.linea %}<span class="org-linea">Línea {{ o.linea }}</span>{% endif %}
+        </div>
+      </header>
+      <p class="org-resumen">{{ o.resumen }}</p>
+      <h4>¿Qué hace?</h4>
+      <ul>
+        {% for f in o.funciones %}<li>{{ f }}</li>{% endfor %}
+      </ul>
+      <div class="org-cuando"><b>Acude cuando:</b> {{ o.cuando }}</div>
+    </article>
+    {% endfor %}
+  </div>
+  <p class="org-vacio" id="org-vacio" hidden>No hay organismos para ese tipo de emergencia.</p>
+
+  <div class="org-cta animate-in">
+    <div>
+      <b>¿Presenciaste una emergencia?</b>
+      <p>Regístrala y el gestor de tu municipio se encargará de coordinar la atención.</p>
+    </div>
+    {% if puede('reportes.crear') %}
+    <a href="{{ url_for('reportar_emergencia') }}" class="btn-cta">Registrar emergencia</a>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+(function () {
+  var chips = document.querySelectorAll('.org-chip');
+  var cards = document.querySelectorAll('.org-card');
+  var vacio = document.getElementById('org-vacio');
+  chips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var f = chip.getAttribute('data-filtro');
+      chips.forEach(function (c) { c.classList.toggle('is-active', c === chip); });
+      var visibles = 0;
+      cards.forEach(function (card) {
+        var ok = f === 'todos' || card.getAttribute('data-tipos').split(' ').indexOf(f) !== -1;
+        card.hidden = !ok;
+        if (ok) visibles++;
+      });
+      vacio.hidden = visibles !== 0;
+    });
+  });
+})();
+</script>
+{% endblock %}
