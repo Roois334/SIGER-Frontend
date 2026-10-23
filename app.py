@@ -1,7 +1,7 @@
 ﻿import os
 import time
 from datetime import datetime
-import requests
+from utilities.api import requests, SesionExpirada
 from flask import Flask, render_template, request, redirect, url_for, session, flash, Response, abort, jsonify
 from config import Config
 from utilities.decorators import login_required, admin_required, permiso_required
@@ -1071,10 +1071,46 @@ def logout():
     return redirect(url_for("login"))
 
 
+# ---------------------------------------------------------------- seguridad
+import secrets as _secrets
+
+
+def _csrf_token():
+    if "_csrf" not in session:
+        session["_csrf"] = _secrets.token_hex(32)
+    return session["_csrf"]
+
+
+@app.context_processor
+def inject_csrf():
+    """En los formularios: <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">"""
+    return {"csrf_token": _csrf_token}
+
+
+@app.before_request
+def verificar_csrf():
+    """Todo POST/PUT/PATCH/DELETE debe traer el token de la sesion (evita acciones forzadas desde otros sitios)."""
+    if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+        return None
+    enviado = request.form.get("csrf_token") or request.headers.get("X-CSRFToken", "")
+    esperado = session.get("_csrf", "")
+    if not esperado or not _secrets.compare_digest(enviado.encode(), esperado.encode()):
+        flash("Tu formulario expiro por seguridad. Intenta de nuevo", "error")
+        return redirect(url_for("index"))
+    return None
+
+
+@app.errorhandler(SesionExpirada)
+def sesion_expirada(e):
+    session.clear()
+    flash("Tu sesion expiro o tu cuenta fue desactivada. Ingresa de nuevo", "error")
+    return redirect(url_for("login"))
+
+
 @app.errorhandler(404)
 def not_found(e):
     return render_template("404.html"), 404
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(debug=Config.DEBUG, port=5001)

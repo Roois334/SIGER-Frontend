@@ -20,11 +20,12 @@
     </div>
 
     <form method="POST" id="rc-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="lfg">
         <label class="lfl" for="rc-nueva">Contraseña nueva</label>
         <div class="liw">
           <svg class="lic" viewBox="0 0 24 24" fill="none" width="15" height="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <input type="password" name="nueva" id="rc-nueva" class="lfi lfi-r" placeholder="Mínimo 6 caracteres" minlength="6" maxlength="128" autocomplete="new-password" required autofocus>
+          <input type="password" name="nueva" id="rc-nueva" class="lfi lfi-r" placeholder="Mínimo 8 caracteres, con letras y números" minlength="8" maxlength="128" autocomplete="new-password" required autofocus>
           <button type="button" class="leye" data-eye aria-label="Mostrar contraseña">
             <svg viewBox="0 0 24 24" fill="none" width="16" height="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
@@ -58,7 +59,7 @@
           barras = document.querySelectorAll(".rc-meter i"), txt = document.getElementById("rc-fuerza"), ig = document.getElementById("rc-igual");
       var NIV = ["Muy corta", "Débil", "Aceptable", "Buena", "Muy segura"];
       function puntaje(p) {
-        if (!p) return -1; if (p.length < 6) return 0;
+        if (!p) return -1; if (p.length < 8) return 0;
         var s = 1; if (p.length >= 10) s++; if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++; if (/\d/.test(p) && /[^A-Za-z0-9]/.test(p)) s++;
         return Math.min(s, 4);
       }

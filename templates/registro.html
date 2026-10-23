@@ -14,6 +14,7 @@
     </div>
 
     <form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="lrow2">
         <div class="lfg">
           <label class="lfl">Nombre</label>
@@ -53,7 +54,7 @@
         <div class="lfg">
           <label class="lfl">Contraseña</label>
           <div class="liw">
-            <input type="password" name="password" class="lfi" style="padding-left:13px" placeholder="Mínimo 6 caracteres" required>
+            <input type="password" name="password" class="lfi" style="padding-left:13px" placeholder="Mínimo 8 caracteres, con letras y números" minlength="8" required>
           </div>
         </div>
         <div class="lfg">

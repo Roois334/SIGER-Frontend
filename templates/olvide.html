@@ -21,6 +21,7 @@
     </div>
 
     <form method="POST" novalidate>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="lfg">
         <label class="lfl" for="rc-email">Correo electrónico</label>
         <div class="liw">
@@ -58,6 +59,7 @@
     </ul>
 
     <form method="POST" class="rc-resend">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="email" value="{{ email }}">
       <span id="rc-count" aria-live="polite"></span>
       <button type="submit" id="rc-btn" class="rc-link" disabled>Reenviar correo</button>

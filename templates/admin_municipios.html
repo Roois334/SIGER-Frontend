@@ -10,6 +10,7 @@
 
   <div class="adm-table-wrap animate-in" style="padding:20px 24px;margin-bottom:20px;">
     <form method="POST" action="{{ url_for('admin_municipios') }}" style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="lfg" style="margin-bottom:0;min-width:160px;">
         <label class="lfl">Codigo</label>
         <div class="liw"><input type="text" name="codigo" class="lfi" style="padding-left:13px" required maxlength="20"></div>
@@ -66,6 +67,7 @@
             <a href="{{ url_for('admin_municipio_editar', municipio_id=m.id) }}" class="adm-btn adm-btn-edit">Editar</a>
             <form method="POST" action="{{ url_for('admin_municipio_estado', municipio_id=m.id) }}"
                   onsubmit="return confirm('{{ '¿Desactivar' if m.activo else '¿Activar' }} el municipio {{ m.nombre }}?');">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="activo" value="{{ 0 if m.activo else 1 }}">
               {% if m.activo %}
               <button type="submit" class="adm-btn adm-btn-danger">Desactivar</button>

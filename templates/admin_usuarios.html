@@ -65,6 +65,7 @@
             <a href="{{ url_for('admin_usuario_editar', user_id=u.id) }}" class="adm-btn adm-btn-edit">Editar</a>
             <form method="POST" action="{{ url_for('admin_usuario_estado', user_id=u.id) }}"
                   onsubmit="return confirm('{{ '¿Desactivar' if u.activo else '¿Activar' }} la cuenta de {{ u.nombre }}?');">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="activo" value="{{ 0 if u.activo else 1 }}">
               {% if u.activo %}
               <button type="submit" class="adm-btn adm-btn-danger">Desactivar</button>

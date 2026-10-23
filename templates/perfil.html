@@ -22,6 +22,7 @@
           {% if u.get('foto_url') %}<img src="{{ backend_url }}{{ u['foto_url'] }}" alt="Foto de {{ u['nombre'] }}">{% else %}{{ iniciales }}{% endif %}
         </div>
         <form action="{{ url_for('perfil_foto') }}" method="post" enctype="multipart/form-data" class="pf-cam-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label for="foto" class="pf-cam" title="Cambiar foto" aria-label="Cambiar foto">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           </label>
@@ -56,6 +57,7 @@
       <div class="pf-head-actions">
         {% if u.get('foto_url') %}
         <form action="{{ url_for('perfil_foto_quitar') }}" method="post">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="pf-btn pf-btn-ghost">Quitar foto</button>
         </form>
         {% endif %}
@@ -95,6 +97,7 @@
           <p>Así apareces ante gestores y organismos cuando reportas o atiendes una emergencia.</p>
         </div>
         <form action="{{ url_for('perfil_datos') }}" method="post" class="pf-form" autocomplete="on">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="pf-row">
             <label class="pf-field">
               <span>Nombre</span>
@@ -137,6 +140,7 @@
           <p>Con este correo ingresas a SIGER. Tu correo actual es <b>{{ u['email'] }}</b>.</p>
         </div>
         <form action="{{ url_for('perfil_correo') }}" method="post" class="pf-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label class="pf-field">
             <span>Nuevo correo</span>
             <input type="email" name="email" placeholder="nuevo@correo.com" maxlength="120" required autocomplete="email" inputmode="email">
@@ -158,9 +162,10 @@
       <section class="pf-card animate-in" id="seguridad">
         <div class="pf-card-head">
           <h2>Contraseña</h2>
-          <p>Usa mínimo 6 caracteres. Mientras más larga y variada, más segura.</p>
+          <p>Usa mínimo 8 caracteres, con letras y números. Mientras más larga y variada, más segura.</p>
         </div>
         <form action="{{ url_for('perfil_password') }}" method="post" class="pf-form" id="pf-form-pw">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label class="pf-field">
             <span>Contraseña actual</span>
             <div class="pf-pw">
@@ -174,7 +179,7 @@
             <label class="pf-field">
               <span>Contraseña nueva</span>
               <div class="pf-pw">
-                <input type="password" name="nueva" id="pf-nueva" required minlength="6" maxlength="128" autocomplete="new-password">
+                <input type="password" name="nueva" id="pf-nueva" required minlength="8" maxlength="128" autocomplete="new-password">
                 <button type="button" class="pf-eye" data-eye aria-label="Mostrar contraseña">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -230,7 +235,7 @@
   var NIVELES = ["Muy corta", "Débil", "Aceptable", "Buena", "Muy segura"];
   function puntaje(p) {
     if (!p) return -1;
-    if (p.length < 6) return 0;
+    if (p.length < 8) return 0;
     var s = 1;
     if (p.length >= 10) s++;
     if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++;

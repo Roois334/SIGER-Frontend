@@ -13,6 +13,7 @@
     </div>
 
     <form method="POST" action="{{ url_for('admin_usuario_editar', user_id=usuario.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="lrow2">
         <div class="lfg">
           <label class="lfl">Nombre</label>

@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 instance/
 *.db
+.vs/
+_respaldo_codigo/
+parche_*.py
