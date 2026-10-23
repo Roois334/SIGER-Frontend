@@ -26,6 +26,7 @@
   </div>
 
   <form id="form-reporte" class="rep-layout" method="POST" action="{{ url_for('reportar_emergencia') }}" enctype="multipart/form-data" novalidate>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="rep-main">
 
       <!-- 1 · TIPO -->

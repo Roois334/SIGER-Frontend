@@ -77,6 +77,7 @@
         </p>
         {% if reporte.organismos_disponibles %}
         <form method="POST" action="{{ url_for('reporte_asignar', reporte_id=reporte.id) }}" class="act-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="act-row">
             <div class="rep-field">
               <label class="rep-label" for="act-org">Organismo *</label>
@@ -108,6 +109,7 @@
         {% if ac.iniciar %}
         <p class="act-help">El gestor de tu municipio te asignó esta emergencia. Acéptala para comenzar la atención; el ciudadano verá el avance.</p>
         <form method="POST" action="{{ url_for('reporte_estado', reporte_id=reporte.id) }}" class="act-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="accion" value="iniciar">
           <div class="rep-field">
             <label class="rep-label" for="act-ini">Nota <small>(opcional)</small></label>
@@ -120,6 +122,7 @@
         {% if ac.resolver %}
         <p class="act-help">Cuando la emergencia esté controlada, ciérrala dejando un resumen de lo realizado.</p>
         <form method="POST" action="{{ url_for('reporte_estado', reporte_id=reporte.id) }}" class="act-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="accion" value="resolver">
           <div class="rep-field">
             <label class="rep-label" for="act-res">Resumen de la atención <small>(opcional)</small></label>
@@ -133,6 +136,7 @@
         <details class="act-more">
           <summary>No puedo atender este reporte</summary>
           <form method="POST" action="{{ url_for('reporte_estado', reporte_id=reporte.id) }}" class="act-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="accion" value="devolver">
             <div class="rep-field">
               <label class="rep-label" for="act-dev">Motivo *</label>
@@ -147,6 +151,7 @@
         <details class="act-more">
           <summary>Descartar reporte (falsa alarma o duplicado)</summary>
           <form method="POST" action="{{ url_for('reporte_estado', reporte_id=reporte.id) }}" class="act-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="accion" value="descartar">
             <div class="rep-field">
               <label class="rep-label" for="act-desc">Motivo *</label>
