@@ -120,6 +120,12 @@
           </div>
           <span class="rep-error" id="error-afectados"></span>
         </div>
+
+        <div class="rep-field">
+          <label class="rep-label" for="campo-heridos">Heridos <small>(aproximado, sin contar a los ilesos)</small></label>
+          <input type="number" name="heridos" id="campo-heridos" class="rep-input" min="0" max="{{ config.limites.max_afectados }}" value="{{ form_data.heridos if form_data else 0 }}" inputmode="numeric">
+          <span class="rep-error" id="error-heridos"></span>
+        </div>
       </section>
 
       <!-- 4 · EVIDENCIAS -->
@@ -196,6 +202,7 @@
   var campoDir = $("campo-direccion");
   var campoDesc = $("campo-descripcion");
   var campoAfect = $("campo-afectados");
+  var campoHer = $("campo-heridos");
   var latInput = $("latitud");
   var lonInput = $("longitud");
 
@@ -444,6 +451,18 @@
       var ok = v === "" || (Number.isInteger(n) && n >= 0 && n <= LIM.max_afectados);
       setError("afectados", ok ? "" : "Ingresa un número entre 0 y " + LIM.max_afectados);
       return ok;
+    },
+    heridos: function () {
+      var v = campoHer.value.trim();
+      var n = Number(v);
+      var a = Number(campoAfect.value.trim() || 0);
+      var msg = "";
+      if (v !== "") {
+        if (!Number.isInteger(n) || n < 0) msg = "Ingresa un número entero, 0 o mayor";
+        else if (n > a) msg = "No puede ser mayor que las personas afectadas (" + a + ")";
+      }
+      setError("heridos", msg, campoHer);
+      return msg === "";
     }
   };
 
@@ -460,7 +479,8 @@
     if (campoDesc.value.trim().length >= LIM.min_descripcion) setError("descripcion", "", campoDesc);
     actualizarResumen();
   });
-  campoAfect.addEventListener("input", function () { validar.afectados(); });
+  campoAfect.addEventListener("input", function () { validar.afectados(); if (campoHer.value) validar.heridos(); });
+  campoHer.addEventListener("input", function () { validar.heridos(); });
 
   function contarDescripcion() {
     var n = campoDesc.value.length;
@@ -598,7 +618,7 @@
   var enviando = false;
   form.addEventListener("submit", function (e) {
     if (enviando) { e.preventDefault(); return; }
-    var resultados = [validar.tipo(), validar.municipio(), validar.direccion(), validar.descripcion(), validar.afectados()];
+    var resultados = [validar.tipo(), validar.municipio(), validar.direccion(), validar.descripcion(), validar.afectados(), validar.heridos()];
     if (resultados.indexOf(false) !== -1) {
       e.preventDefault();
       var primero = form.querySelector(".rep-error:not(:empty)");

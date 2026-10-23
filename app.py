@@ -703,6 +703,7 @@ ESTADO_LABELS = {
     "asignado": "Asignado",
     "en_atencion": "En atención",
     "resuelto": "Resuelto",
+    "cerrado": "Cerrado",
     "descartado": "Descartado",
 }
 
@@ -748,6 +749,7 @@ def reportar_emergencia():
             "longitud": request.form.get("longitud", ""),
             "descripcion": request.form.get("descripcion", "").strip(),
             "afectados": request.form.get("afectados", "0"),
+            "heridos": request.form.get("heridos", "0"),
         }
 
         archivos = [
@@ -821,7 +823,10 @@ def reporte_detalle(reporte_id):
         return redirect(url_for(volver))
 
     reporte = r.json()["reporte"]
-    return render_template("reporte_detalle.html", reporte=reporte,
+    tipos_cambio = []
+    if reporte.get("acciones", {}).get("reclasificar"):
+        tipos_cambio = [t["nombre"] for t in _config_reporte()["tipos"]]
+    return render_template("reporte_detalle.html", reporte=reporte, tipos_cambio=tipos_cambio,
                             nuevo=request.args.get("nuevo") == "1",
                             es_dueno=reporte["ciudadano_id"] == session["usuario"]["id"],
                             volver_endpoint=volver,
@@ -863,6 +868,7 @@ def reporte_asignar(reporte_id):
 MENSAJES_ACCION = {
     "iniciar": "Atención iniciada. El ciudadano puede ver el avance",
     "resolver": "Reporte marcado como resuelto",
+    "cerrar": "Emergencia cerrada. Quedó registrada en el historial",
     "devolver": "Reporte devuelto al gestor municipal",
     "descartar": "Reporte descartado",
 }
@@ -878,6 +884,16 @@ def reporte_estado(reporte_id):
         return redirect(url_for("reporte_detalle", reporte_id=reporte_id))
     payload = {"accion": accion, "comentario": request.form.get("comentario", "").strip()}
     return _accion_reporte(reporte_id, "estado", payload, MENSAJES_ACCION[accion])
+
+
+@app.route("/reportes/<int:reporte_id>/tipo", methods=["POST"])
+@login_required
+def reporte_tipo(reporte_id):
+    """El gestor corrige el tipo de una emergencia abierta. El backend valida permisos y estado."""
+    payload = {"tipo": request.form.get("tipo", "").strip(),
+               "comentario": request.form.get("comentario", "").strip()}
+    return _accion_reporte(reporte_id, "tipo", payload,
+                           "Tipo de emergencia actualizado. Quedó registrado en el historial")
 
 
 @app.route("/evidencias/<int:evidencia_id>")
@@ -970,6 +986,8 @@ def gestion_emergencias():
         "estado": request.args.get("estado", ""),
         "prioridad": request.args.get("prioridad", ""),
         "municipio_id": request.args.get("municipio_id", ""),
+        "desde": request.args.get("desde", "").strip(),
+        "hasta": request.args.get("hasta", "").strip(),
     }
     params = {k: v for k, v in filtros.items() if v}
     tipos = [t["nombre"] for t in _config_reporte()["tipos"]]

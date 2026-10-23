@@ -5,7 +5,7 @@
 {% set pendientes = reportes|selectattr('estado', 'equalto', 'pendiente')|list|length %}
 {% set asignados = reportes|selectattr('estado', 'equalto', 'asignado')|list|length %}
 {% set en_atencion = reportes|selectattr('estado', 'equalto', 'en_atencion')|list|length %}
-{% set resueltos = reportes|selectattr('estado', 'equalto', 'resuelto')|list|length %}
+{% set resueltos = reportes|selectattr('estado', 'in', ['resuelto', 'cerrado'])|list|length %}
 {% set criticas = reportes|selectattr('prioridad', 'equalto', 'critica')|list|length %}
 
 <div class="container">
@@ -76,8 +76,14 @@
       </select>
     </div>
     {% endif %}
+    <div class="adm-field adm-date-wrap">
+      <label class="adm-date">Desde <input type="date" name="desde" class="adm-input" value="{{ filtros.desde }}"></label>
+    </div>
+    <div class="adm-field adm-date-wrap">
+      <label class="adm-date">Hasta <input type="date" name="hasta" class="adm-input" value="{{ filtros.hasta }}"></label>
+    </div>
     <button type="submit" class="btn-cta adm-filter-btn">Filtrar</button>
-    {% if filtros.q or filtros.tipo or filtros.prioridad or filtros.estado or filtros.municipio_id %}
+    {% if filtros.q or filtros.tipo or filtros.prioridad or filtros.estado or filtros.municipio_id or filtros.desde or filtros.hasta %}
     <a href="{{ url_for('gestion_emergencias') }}" class="adm-clear-link">Limpiar</a>
     {% endif %}
   </form>
