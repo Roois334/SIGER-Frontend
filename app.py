@@ -208,6 +208,14 @@ def restablecer_password(token):
     return render_template("restablecer.html", valido=True, email=info.get("email"), minutos=info.get("minutos"))
 
 
+TIPOS_DOCUMENTO = [
+    ("CC", "Cédula de ciudadanía"),
+    ("CE", "Cédula de extranjería"),
+    ("TI", "Tarjeta de identidad"),
+    ("PP", "Pasaporte"),
+]
+
+
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
     if "usuario" in session:
@@ -219,19 +227,24 @@ def registro():
             "apellido": request.form.get("apellido", "").strip(),
             "email": request.form.get("email", "").strip().lower(),
             "municipio": request.form.get("municipio", "").strip(),
+            "tipo_documento": request.form.get("tipo_documento", "").strip(),
+            "documento": request.form.get("documento", "").strip(),
+            "telefono": request.form.get("telefono", "").strip(),
             "password": request.form.get("password", ""),
         }
         confirmar = request.form.get("confirmar", "")
 
         if payload["password"] != confirmar:
             flash("Las contrasenas no coinciden", "error")
-            return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE)
+            return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE,
+                           tipos_documento=TIPOS_DOCUMENTO, v=request.form)
 
         try:
             r = requests.post(BACKEND_URL + "/api/auth/register", json=payload, timeout=5)
         except requests.exceptions.ConnectionError:
             flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
-            return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE)
+            return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE,
+                           tipos_documento=TIPOS_DOCUMENTO, v=request.form)
 
         if r.status_code == 201:
             data = r.json()
@@ -243,7 +256,8 @@ def registro():
 
         flash(r.json().get("error", "No se pudo crear la cuenta"), "error")
 
-    return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE)
+    return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE,
+                           tipos_documento=TIPOS_DOCUMENTO, v=request.form)
 
 
 @app.route("/dashboard")
@@ -265,7 +279,7 @@ def perfil():
             miembro_desde = datos.get("fecha_creacion")
     except requests.exceptions.ConnectionError:
         pass
-    return render_template("perfil.html", miembro_desde=miembro_desde,
+    return render_template("perfil.html", miembro_desde=miembro_desde, tipos_documento=TIPOS_DOCUMENTO,
                             municipios=MUNICIPIOS_SABANA_OCCIDENTE,
                             role_label=ROLE_LABELS.get(session["usuario"]["rol"], session["usuario"]["rol"]))
 
@@ -292,7 +306,10 @@ def _perfil_accion(metodo, ruta, payload, mensaje_ok, ancla):
 @app.route("/perfil/datos", methods=["POST"])
 @login_required
 def perfil_datos():
-    payload = {"nombre": request.form.get("nombre", ""), "apellido": request.form.get("apellido", "")}
+    payload = {"nombre": request.form.get("nombre", ""), "apellido": request.form.get("apellido", ""),
+               "tipo_documento": request.form.get("tipo_documento", ""),
+               "documento": request.form.get("documento", ""),
+               "telefono": request.form.get("telefono", "")}
     if "municipio" in request.form:
         payload["municipio"] = request.form.get("municipio", "")
     return _perfil_accion("PUT", "/api/usuarios/me", payload, "Tus datos se guardaron", "datos")
@@ -1105,6 +1122,17 @@ def sesion_expirada(e):
     session.clear()
     flash("Tu sesion expiro o tu cuenta fue desactivada. Ingresa de nuevo", "error")
     return redirect(url_for("login"))
+
+
+@app.after_request
+def no_guardar_en_cache(respuesta):
+    """Las paginas HTML no se guardan en el cache del navegador: al cerrar sesion,
+    el boton Atras no puede mostrar contenido privado."""
+    if respuesta.mimetype == "text/html":
+        respuesta.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        respuesta.headers["Pragma"] = "no-cache"
+        respuesta.headers["Expires"] = "0"
+    return respuesta
 
 
 @app.errorhandler(404)

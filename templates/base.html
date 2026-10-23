@@ -156,6 +156,10 @@
     });
   }, 5000);
 </script>
+<script>
+  // Si el navegador restaura la pagina desde su memoria (boton Atras), se vuelve a pedir al servidor
+  window.addEventListener('pageshow', function (e) { if (e.persisted) { location.reload(); } });
+</script>
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>

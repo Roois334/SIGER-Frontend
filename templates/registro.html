@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Crear cuenta — SIGER{% endblock %}
 {% block content %}
+{% set v = v or {} %}
 
 <div class="lw">
   <div class="lc animate-in">
@@ -19,13 +20,13 @@
         <div class="lfg">
           <label class="lfl">Nombre</label>
           <div class="liw">
-            <input type="text" name="nombre" class="lfi" style="padding-left:13px" placeholder="Tu nombre" required>
+            <input type="text" name="nombre" class="lfi" style="padding-left:13px" placeholder="Tu nombre" value="{{ v.get('nombre', '') }}" required>
           </div>
         </div>
         <div class="lfg">
           <label class="lfl">Apellido</label>
           <div class="liw">
-            <input type="text" name="apellido" class="lfi" style="padding-left:13px" placeholder="Tu apellido" required>
+            <input type="text" name="apellido" class="lfi" style="padding-left:13px" placeholder="Tu apellido" value="{{ v.get('apellido', '') }}" required>
           </div>
         </div>
       </div>
@@ -34,7 +35,34 @@
         <label class="lfl">Correo electrónico</label>
         <div class="liw">
           <svg class="lic" viewBox="0 0 24 24" fill="none" width="15" height="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
-          <input type="email" name="email" class="lfi" placeholder="tu@correo.com" autocomplete="email" required>
+          <input type="email" name="email" class="lfi" placeholder="tu@correo.com" autocomplete="email" value="{{ v.get('email', '') }}" required>
+        </div>
+      </div>
+
+      <div class="lrow2">
+        <div class="lfg">
+          <label class="lfl">Tipo de documento</label>
+          <div class="liw">
+            <select name="tipo_documento" class="lfi" style="padding-left:13px" required>
+              <option value="" disabled {{ '' if v.get('tipo_documento') else 'selected' }}>Selecciona</option>
+              {% for cod, nom in tipos_documento %}
+              <option value="{{ cod }}" {{ 'selected' if v.get('tipo_documento') == cod }}>{{ cod }} · {{ nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="lfg">
+          <label class="lfl">Número de documento</label>
+          <div class="liw">
+            <input type="text" name="documento" class="lfi" style="padding-left:13px" placeholder="Sin puntos ni espacios" maxlength="15" value="{{ v.get('documento', '') }}" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="lfg">
+        <label class="lfl">Teléfono celular</label>
+        <div class="liw">
+          <input type="tel" name="telefono" class="lfi" style="padding-left:13px" placeholder="3001234567" inputmode="numeric" maxlength="16" autocomplete="tel" value="{{ v.get('telefono', '') }}" required>
         </div>
       </div>
 
@@ -44,7 +72,7 @@
           <select name="municipio" class="lfi" style="padding-left:13px" required>
             <option value="" disabled selected>Selecciona tu municipio</option>
             {% for m in municipios %}
-            <option value="{{ m }}">{{ m }}</option>
+            <option value="{{ m }}" {{ 'selected' if v.get('municipio') == m }}>{{ m }}</option>
             {% endfor %}
           </select>
         </div>
