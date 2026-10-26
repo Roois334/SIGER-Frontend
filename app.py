@@ -889,6 +889,15 @@ def reporte_estado(reporte_id):
     return _accion_reporte(reporte_id, "estado", payload, MENSAJES_ACCION[accion])
 
 
+@app.route("/reportes/<int:reporte_id>/apoyo", methods=["POST"])
+@login_required
+def reporte_apoyo(reporte_id):
+    """El gestor define los organismos de apoyo de la emergencia. El backend valida."""
+    payload = {"organismo_ids": request.form.getlist("organismo_ids", type=int)}
+    return _accion_reporte(reporte_id, "apoyo", payload,
+                           "Organismos de apoyo actualizados. Quedó registrado en el historial")
+
+
 @app.route("/reportes/<int:reporte_id>/tipo", methods=["POST"])
 @login_required
 def reporte_tipo(reporte_id):

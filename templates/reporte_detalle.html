@@ -19,7 +19,7 @@
   ('Resuelto', 'La emergencia fue atendida.'),
   ('Cerrado', 'El gestor confirmó el cierre de la emergencia.')
 ] %}
-{% set accion_txt = {'asignar': 'Aceptado y asignado', 'reasignar': 'Reasignado', 'iniciar': 'Atención iniciada', 'resolver': 'Marcado como resuelto', 'devolver': 'Devuelto al gestor', 'descartar': 'Reporte descartado', 'cerrar': 'Emergencia cerrada', 'reclasificar': 'Tipo reclasificado'} %}
+{% set accion_txt = {'asignar': 'Aceptado y asignado', 'reasignar': 'Reasignado', 'iniciar': 'Atención iniciada', 'resolver': 'Marcado como resuelto', 'devolver': 'Devuelto al gestor', 'descartar': 'Reporte descartado', 'cerrar': 'Emergencia cerrada', 'reclasificar': 'Tipo reclasificado', 'apoyo': 'Organismos de apoyo'} %}
 {% set ac = reporte.acciones or {} %}
 {% set es_staff = session['usuario']['rol'] != 'ciudadano' %}
 
@@ -67,7 +67,7 @@
 
   <div class="det-layout">
     <div class="det-col">
-      {% if ac.asignar or ac.descartar or ac.iniciar or ac.devolver or ac.resolver or ac.cerrar or ac.reclasificar %}
+      {% if ac.asignar or ac.descartar or ac.iniciar or ac.devolver or ac.resolver or ac.cerrar or ac.reclasificar or ac.apoyo %}
       <section class="det-card act-card animate-in" id="panel-acciones">
         <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.5V5l-8-3-8 3v5.5C4 17.5 12 22 12 22z"/><path d="M9 12l2 2 4-4"/></svg>{{ 'Atender esta emergencia' if (ac.iniciar or ac.resolver or ac.devolver) else 'Gestionar este reporte' }}</h3>
 
@@ -201,6 +201,30 @@
         </details>
         {% endif %}
 
+        {% if ac.apoyo %}
+        {% set apoyo_ids = reporte.apoyos|map(attribute='id')|list %}
+        {% set otros = reporte.organismos_disponibles|selectattr('id', 'ne', reporte.organismo_id)|list if reporte.organismos_disponibles else [] %}
+        <details class="act-more"{% if apoyo_ids %} open{% endif %}>
+          <summary>Organismos de apoyo{% if apoyo_ids %} ({{ apoyo_ids|length }}){% endif %}</summary>
+          {% if otros %}
+          <p class="act-hint">El principal (<b>{{ reporte.organismo }}</b>) lleva la atención. Los de apoyo pueden ver la emergencia, pero no cambian su estado. Máximo 5.</p>
+          <form method="POST" action="{{ url_for('reporte_apoyo', reporte_id=reporte.id) }}" class="act-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="rep-field">
+              {% for o in otros %}
+              <label class="act-check" style="display:flex;gap:8px;align-items:center;margin:4px 0;">
+                <input type="checkbox" name="organismo_ids" value="{{ o.id }}" {% if o.id in apoyo_ids %}checked{% endif %}> {{ o.nombre }}{% if o.sugerido %} ★{% endif %}
+              </label>
+              {% endfor %}
+            </div>
+            <button type="submit" class="btn-cta act-btn">Guardar organismos de apoyo</button>
+          </form>
+          {% else %}
+          <p class="act-hint">No hay otros organismos activos en {{ reporte.municipio }} para sumar como apoyo.</p>
+          {% endif %}
+        </details>
+        {% endif %}
+
         {% if ac.descartar %}
         <details class="act-more">
           <summary>Descartar reporte (falsa alarma o duplicado)</summary>
@@ -279,6 +303,8 @@
           <div><dt>Prioridad</dt><dd><span class="pill pill-{{ reporte.prioridad }}">{{ prioridad_labels.get(reporte.prioridad, reporte.prioridad) }}</span></dd></div>
           <div><dt>Estado</dt><dd><span class="pill pill-st-{{ reporte.estado }}">{{ estado_labels.get(reporte.estado, reporte.estado) }}</span></dd></div>
           <div><dt>Organismo asignado</dt><dd>{{ reporte.organismo or 'Sin asignar' }}</dd></div>
+          {% if reporte.apoyos %}<div><dt>Organismos de apoyo</dt><dd>{{ reporte.apoyos|map(attribute='nombre')|join(', ') }}</dd></div>{% endif %}
+          {% if reporte.es_apoyo %}<div><dt>Tu participación</dt><dd>Organismo de apoyo (solo consulta)</dd></div>{% endif %}
           {% if reporte.fecha_asignacion %}<div><dt>Asignado el</dt><dd>{{ reporte.fecha_asignacion|fecha_hora }}</dd></div>{% endif %}
           {% if es_staff and reporte.asignado_por %}<div><dt>Asignado por</dt><dd>{{ reporte.asignado_por }}</dd></div>{% endif %}
           {% if es_staff and reporte.ciudadano %}<div><dt>Reportado por</dt><dd>{{ reporte.ciudadano }}</dd></div>{% endif %}
