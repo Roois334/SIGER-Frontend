@@ -92,7 +92,26 @@
             <div class="rep-field">
               <label class="rep-label" for="act-prio">Prioridad</label>
               <select class="rep-input" id="act-prio" name="prioridad">
-                {% for v, l in prioridad_labels.items() %}<option value="{{ v }}" {% if v == reporte.prioridad %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                <option value="auto" selected>Calcular con las variables</option>
+                {% for v, l in prioridad_labels.items() %}<option value="{{ v }}">Fijar a mano: {{ l }}</option>{% endfor %}
+              </select>
+              <small class="act-hint">Prioridad actual: <b>{{ prioridad_labels.get(reporte.prioridad, reporte.prioridad) }}</b></small>
+            </div>
+          </div>
+          <div class="act-row">
+            <div class="rep-field">
+              <label class="rep-label" for="act-vias">Vías afectadas <small>(cantidad)</small></label>
+              <input type="text" class="rep-input" id="act-vias" name="vias_afectadas" maxlength="3" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" pattern="[0-9]*" value="{{ reporte.vias_afectadas if reporte.vias_afectadas is not none else '' }}">
+            </div>
+            <div class="rep-field">
+              <label class="rep-label" for="act-area">Área afectada <small>(m²)</small></label>
+              <input type="text" class="rep-input" id="act-area" name="area_afectada" maxlength="8" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" pattern="[0-9]*" value="{{ reporte.area_afectada if reporte.area_afectada is not none else '' }}">
+            </div>
+            <div class="rep-field">
+              <label class="rep-label" for="act-riesgo">Riesgo de propagación</label>
+              <select class="rep-input" id="act-riesgo" name="riesgo_propagacion">
+                <option value="">Sin evaluar</option>
+                {% for v, l in [('bajo', 'Bajo'), ('medio', 'Medio'), ('alto', 'Alto')] %}<option value="{{ v }}" {% if v == reporte.riesgo_propagacion %}selected{% endif %}>{{ l }}</option>{% endfor %}
               </select>
             </div>
           </div>
@@ -253,6 +272,9 @@
           <div><dt>Municipio</dt><dd>{{ reporte.municipio or '—' }}</dd></div>
           <div><dt>Personas afectadas</dt><dd>{{ reporte.afectados }}</dd></div>
           <div><dt>Heridos</dt><dd>{{ reporte.heridos or 0 }}</dd></div>
+          {% if es_staff and reporte.vias_afectadas is not none %}<div><dt>Vías afectadas</dt><dd>{{ reporte.vias_afectadas }}</dd></div>{% endif %}
+          {% if es_staff and reporte.area_afectada is not none %}<div><dt>Área afectada</dt><dd>{{ reporte.area_afectada }} m²</dd></div>{% endif %}
+          {% if es_staff and reporte.riesgo_propagacion %}<div><dt>Riesgo de propagación</dt><dd>{{ reporte.riesgo_propagacion|capitalize }}</dd></div>{% endif %}
           <div><dt>Prioridad</dt><dd><span class="pill pill-{{ reporte.prioridad }}">{{ prioridad_labels.get(reporte.prioridad, reporte.prioridad) }}</span></dd></div>
           <div><dt>Estado</dt><dd><span class="pill pill-st-{{ reporte.estado }}">{{ estado_labels.get(reporte.estado, reporte.estado) }}</span></dd></div>
           <div><dt>Organismo asignado</dt><dd>{{ reporte.organismo or 'Sin asignar' }}</dd></div>

@@ -860,6 +860,9 @@ def reporte_asignar(reporte_id):
         "organismo_id": request.form.get("organismo_id", type=int),
         "prioridad": request.form.get("prioridad", "").strip(),
         "comentario": request.form.get("comentario", "").strip(),
+        "vias_afectadas": request.form.get("vias_afectadas", "").strip(),
+        "area_afectada": request.form.get("area_afectada", "").strip(),
+        "riesgo_propagacion": request.form.get("riesgo_propagacion", "").strip(),
     }
     return _accion_reporte(reporte_id, "asignar", payload,
                            "Reporte aceptado y asignado. El organismo ya puede verlo")
