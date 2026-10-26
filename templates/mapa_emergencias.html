@@ -12,7 +12,7 @@
     <h1 class="dash-title">Mapa de emergencias</h1>
     <p class="dash-sub">
       {% if es_organismo %}Ubicación de las emergencias que el gestor asignó a tu organismo.
-      {% elif es_ciudadano %}Ubicación y estado de las emergencias que has reportado. Elige un municipio para ir a él.
+      {% elif es_ciudadano %}Tus reportes y las emergencias activas de la comunidad, con ubicación aproximada para proteger la privacidad. Elige un municipio para ir a él.
       {% else %}Ubicación, prioridad y estado de los incidentes para ver su distribución en el territorio.{% endif %}
     </p>
   </div>
@@ -234,7 +234,20 @@
     return L.divIcon({ className: "mk-wrap", html: html, iconSize: [t, t], iconAnchor: [t / 2, t * 1.2], popupAnchor: [0, -t * 1.1] });
   }
 
+  function popupPublico(r) {
+    return '<div class="pp">' +
+      '<div class="pp-head"><span class="pp-ico mk-' + esc(r.prioridad) + '">' + svg(r.tipo, 18) + '</span>' +
+      '<div><b>' + esc(r.tipo_nombre || r.tipo) + '</b><span class="pp-folio">Reporte de la comunidad</span></div></div>' +
+      '<div class="pp-pills"><span class="pill pill-' + esc(r.prioridad) + '">' + esc(CFG.prioridades[r.prioridad] || r.prioridad) + '</span>' +
+      '<span class="pill pill-st-' + esc(r.estado) + '">' + esc(CFG.estados[r.estado] || r.estado) + '</span></div>' +
+      '<dl class="pp-dl">' +
+      '<div><dt>Municipio</dt><dd>' + esc(r.municipio || '—') + '</dd></div>' +
+      '<div><dt>Reportada</dt><dd>' + esc(fmtFecha(r.fecha_hora)) + ' <small>(' + esc(hace(r.fecha_hora)) + ')</small></dd></div></dl>' +
+      '<p class="pp-desc">Ubicación aproximada. Evita la zona si puedes y sigue las indicaciones de las autoridades.</p></div>';
+  }
+
   function popupHtml(r) {
+    if (r.publico) return popupPublico(r);
     return '<div class="pp">' +
       '<div class="pp-head"><span class="pp-ico mk-' + esc(r.prioridad) + '">' + svg(r.tipo, 18) + '</span>' +
       '<div><b>' + esc(r.tipo_nombre || r.tipo) + '</b><a class="pp-folio" href="' + esc(CFG.detalle.replace(/0$/, r.id)) + '">' + esc(r.folio) + "</a></div></div>" +
@@ -290,7 +303,7 @@
       var firma = [r.prioridad, r.estado, r.tipo, r.latitud, r.longitud].join("|");
       var m = marcadores[r.id];
       if (!m) {
-        var mk = L.marker([r.latitud, r.longitud], { icon: iconoDe(r), riseOnHover: true, keyboard: true, title: (r.tipo_nombre || r.tipo) + " · " + r.folio });
+        var mk = L.marker([r.latitud, r.longitud], { icon: iconoDe(r), riseOnHover: true, keyboard: true, title: (r.tipo_nombre || r.tipo) + (r.folio ? " · " + r.folio : "") });
         mk.bindPopup(popupHtml(r), { maxWidth: 320, minWidth: 250, className: "mp-popup", autoPanPadding: [30, 30] });
         mk.on("click", function () { seleccionar(r.id, false); });
         capaMarcadores.addLayer(mk);
@@ -323,8 +336,8 @@
       return '<li><button type="button" class="mp-item mk-' + esc(r.prioridad) + (String(r.id) === String(seleccionId) ? " is-sel" : "") + (nuevos && nuevos[r.id] ? " is-new" : "") + (activa(r) ? "" : " is-off") + '" data-id="' + r.id + '">' +
         '<span class="mp-item-ico">' + svg(r.tipo, 18) + "</span>" +
         '<span class="mp-item-body"><b>' + esc(r.tipo_nombre || r.tipo) + (nuevos && nuevos[r.id] ? ' <em>Nueva</em>' : "") + "</b>" +
-        "<small>" + esc(r.folio) + " · " + esc(r.municipio || "—") + "</small>" +
-        "<small>" + esc((r.direccion || "").slice(0, 46)) + "</small>" +
+        "<small>" + (r.publico ? "Reporte de la comunidad" : esc(r.folio)) + " · " + esc(r.municipio || "—") + "</small>" +
+        "<small>" + (r.publico ? "Ubicación aproximada" : esc((r.direccion || "").slice(0, 46))) + "</small>" +
         '<span class="mp-item-meta"><span class="pill pill-st-' + esc(r.estado) + '">' + esc(CFG.estados[r.estado] || r.estado) + "</span><time>" + esc(hace(r.fecha_hora)) + "</time>" + (sin ? '<span class="mp-sin">Sin ubicación</span>' : "") + "</span></span></button></li>";
     }).join("");
   }
@@ -480,7 +493,7 @@
     var b = e.target.closest(".mp-item"); if (!b) return;
     var id = b.getAttribute("data-id"), r = todos.filter(function (x) { return String(x.id) === id; })[0];
     if (r && tieneCoord(r)) seleccionar(id, true);
-    else if (r) window.location = CFG.detalle.replace(/0$/, r.id);
+    else if (r && !r.publico) window.location = CFG.detalle.replace(/0$/, r.id);
   });
 
   /* ---------------------------------------------------------- inicio */

@@ -60,6 +60,9 @@
                 {% if puede('emergencias.consultar') %}
                 <a href="{{ url_for('gestion_emergencias') }}" class="nav-menu-item {{ 'active' if request.path == url_for('gestion_emergencias') }}">{{ 'Emergencias asignadas' if session['usuario']['rol'] == 'organismo_atencion' else 'Gestión de emergencias' }}</a>
                 {% endif %}
+                {% if puede('emergencias.consultar') %}
+                <a href="{{ url_for('estadisticas') }}" class="nav-menu-item {{ 'active' if request.path == url_for('estadisticas') }}">Estadísticas</a>
+                {% endif %}
                 {% if puede('usuarios.administrar') %}
                 <div class="nav-menu-sep"></div>
                 <a href="{{ url_for('admin_usuarios') }}" class="nav-menu-item {{ 'active' if request.path == url_for('admin_usuarios') }}">Usuarios</a>

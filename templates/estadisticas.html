@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Estadísticas — SIGER{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/estadisticas.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="dash-hero animate-in">
+    <div class="pg-crumbs"><a href="{{ url_for('dashboard') }}">Panel</a><span>/</span><span>Estadísticas</span></div>
+    <h1 class="dash-title">Estadísticas de emergencias</h1>
+    <p class="dash-sub">Tendencias por periodo, municipio, tipo, prioridad y estado, calculadas con los datos registrados.</p>
+    {% if es_organismo %}
+    <span class="role-pill">Solo emergencias asignadas a tu organismo</span>
+    {% elif alcance_municipal %}
+    <span class="role-pill">Mostrando solo emergencias de {{ session['usuario']['municipio'] }}</span>
+    {% endif %}
+  </div>
+
+  <form class="adm-filters" method="GET" action="{{ url_for('estadisticas') }}">
+    <div class="adm-field adm-date-wrap">
+      <label class="adm-date">Desde <input type="date" name="desde" class="adm-input" value="{{ filtros.desde }}"></label>
+    </div>
+    <div class="adm-field adm-date-wrap">
+      <label class="adm-date">Hasta <input type="date" name="hasta" class="adm-input" value="{{ filtros.hasta }}"></label>
+    </div>
+    <div class="adm-field">
+      <select name="tipo" class="adm-input" aria-label="Tipo de emergencia">
+        <option value="">Todos los tipos</option>
+        {% for t in tipos %}<option value="{{ t }}" {% if filtros.tipo == t %}selected{% endif %}>{{ t|tipo_bonito }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="adm-field">
+      <select name="prioridad" class="adm-input" aria-label="Prioridad">
+        <option value="">Todas las prioridades</option>
+        {% for valor, etiqueta in prioridad_labels.items() %}<option value="{{ valor }}" {% if filtros.prioridad == valor %}selected{% endif %}>{{ etiqueta }}</option>{% endfor %}
+      </select>
+    </div>
+    {% if not alcance_municipal %}
+    <div class="adm-field">
+      <select name="municipio_id" class="adm-input" aria-label="Municipio">
+        <option value="">Todos los municipios</option>
+        {% for m in municipios %}<option value="{{ m.id }}" {% if filtros.municipio_id == m.id|string %}selected{% endif %}>{{ m.nombre }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <button type="submit" class="btn-cta adm-filter-btn">Aplicar</button>
+    {% if filtros.desde or filtros.hasta or filtros.tipo or filtros.prioridad or filtros.municipio_id %}
+    <a href="{{ url_for('estadisticas') }}" class="adm-clear-link">Limpiar</a>
+    {% endif %}
+  </form>
+  <p class="gx-filtro-nota">Sin fechas se cuentan todas las emergencias; la gráfica en el tiempo muestra los últimos 30 días.</p>
+
+  <div id="gx-contenido" aria-live="polite"></div>
+</div>
+<script type="application/json" id="gx-cfg">{{ {"datos": url_for('estadisticas_datos')}|tojson }}</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/estadisticas.js') }}"></script>
+<script>
+  (function () {
+    var cfg = JSON.parse(document.getElementById("gx-cfg").textContent);
+    SigerGX.cargarCompleto(cfg.datos + window.location.search, document.getElementById("gx-contenido"));
+  })();
+</script>
+{% endblock %}

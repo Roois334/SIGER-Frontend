@@ -973,7 +973,70 @@ def mapa_datos():
             "afectados": x.get("afectados", 0),
             "descripcion": (x.get("descripcion") or "")[:160],
         })
+    if session["usuario"]["rol"] == "ciudadano":
+        # Emergencias activas de otras personas: el backend ya las entrega recortadas (sin datos personales)
+        try:
+            rp = requests.get(BACKEND_URL + "/api/reportes/publico", headers=_auth_headers(), timeout=8)
+            if rp.status_code == 200:
+                for x in rp.json().get("reportes", []):
+                    reportes.append({
+                        "id": x["ref"], "publico": True, "folio": "", "tipo": x["tipo"],
+                        "tipo_nombre": filtro_tipo_bonito(x["tipo"]), "prioridad": x["prioridad"],
+                        "estado": x["estado"], "latitud": x["latitud"], "longitud": x["longitud"],
+                        "direccion": "", "municipio": x.get("municipio"), "fecha_hora": x.get("fecha_hora"),
+                        "organismo": None, "afectados": None, "descripcion": "",
+                    })
+        except requests.exceptions.RequestException:
+            pass  # si falla, el ciudadano igual ve sus propios reportes
     respuesta = jsonify({"reportes": reportes})
+    respuesta.headers["Cache-Control"] = "no-store"
+    return respuesta
+
+
+@app.route("/estadisticas")
+@permiso_required("emergencias.consultar")
+def estadisticas():
+    rol = session["usuario"]["rol"]
+    filtros = {k: request.args.get(k, "").strip() for k in ("desde", "hasta", "tipo", "prioridad", "municipio_id")}
+    municipios = []
+    if not tiene_alcance_municipal(rol):
+        try:
+            r_mun = requests.get(BACKEND_URL + "/api/municipios/activos", headers=_auth_headers(), timeout=5)
+            municipios = r_mun.json().get("municipios", []) if r_mun.status_code == 200 else []
+        except requests.exceptions.RequestException:
+            municipios = []
+    return render_template("estadisticas.html", filtros=filtros, municipios=municipios,
+                            tipos=[t["nombre"] for t in _config_reporte()["tipos"]],
+                            prioridad_labels=PRIORIDAD_LABELS,
+                            alcance_municipal=tiene_alcance_municipal(rol),
+                            es_organismo=(rol == "organismo_atencion"))
+
+
+@app.route("/estadisticas/datos")
+@permiso_required("emergencias.consultar")
+def estadisticas_datos():
+    """Intermediario JSON: el navegador no habla directo con el backend (que exige token)."""
+    params = {k: request.args.get(k, "").strip() for k in ("desde", "hasta", "tipo", "prioridad", "municipio_id")}
+    params = {k: v for k, v in params.items() if v}
+    try:
+        r = requests.get(BACKEND_URL + "/api/reportes/estadisticas", headers=_auth_headers(), params=params, timeout=20)
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "No se pudo conectar con el servidor"}), 503
+    if r.status_code in (401, 422):
+        return jsonify({"error": "Tu sesion expiro. Ingresa de nuevo"}), 401
+    try:
+        d = r.json()
+    except ValueError:
+        return jsonify({"error": "Respuesta no valida del servidor"}), 502
+    if r.status_code != 200:
+        return jsonify({"error": d.get("error", "No se pudieron cargar las estadisticas")}), (r.status_code if r.status_code in (400, 403) else 502)
+    for x in d.get("por_estado", []):
+        x["nombre"] = ESTADO_LABELS.get(x["clave"], x["clave"])
+    for x in d.get("por_prioridad", []):
+        x["nombre"] = PRIORIDAD_LABELS.get(x["clave"], x["clave"])
+    for x in d.get("por_tipo", []):
+        x["nombre"] = filtro_tipo_bonito(x["clave"])
+    respuesta = jsonify(d)
     respuesta.headers["Cache-Control"] = "no-store"
     return respuesta
 

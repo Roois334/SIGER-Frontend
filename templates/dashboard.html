@@ -62,13 +62,13 @@
     </a>
     {% endif %}
 
-    {% if puede('emergencias.consultar') %}
+    {% if puede('mapa.ver') %}
     <a href="{{ url_for('mapa_emergencias') }}" class="dash-card dash-card-link">
       <div class="dash-card-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
       </div>
       <h3>Mapa de emergencias</h3>
-      <p>Visualiza en el mapa los incidentes{% if session['usuario']['rol'] == 'organismo_atencion' %} asignados a tu organismo{% else %} activos{% endif %}, su prioridad y su distribución territorial.</p>
+      <p>Visualiza en el mapa los incidentes{% if session['usuario']['rol'] == 'organismo_atencion' %} asignados a tu organismo{% elif session['usuario']['rol'] == 'ciudadano' %} activos de la comunidad (con ubicación aproximada) y los tuyos{% else %} activos{% endif %}, su prioridad y su distribución territorial.</p>
       <span class="dash-card-tag dash-card-tag-live">Disponible</span>
     </a>
     {% else %}
@@ -82,14 +82,16 @@
     </div>
     {% endif %}
 
-    <div class="dash-card">
+    {% if puede('emergencias.consultar') %}
+    <a href="{{ url_for('estadisticas') }}" class="dash-card dash-card-link">
       <div class="dash-card-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
       </div>
       <h3>Estadísticas</h3>
       <p>Consulta tendencias por tipo de emergencia, municipio, prioridad y estado.</p>
-      <span class="dash-card-tag">Próximamente</span>
-    </div>
+      <span class="dash-card-tag dash-card-tag-live">Disponible</span>
+    </a>
+    {% endif %}
 
     {% if puede('usuarios.administrar') %}
     <a href="{{ url_for('admin_usuarios') }}" class="dash-card dash-card-link">
@@ -102,6 +104,29 @@
     </a>
     {% endif %}
   </div>
+
+  {% if puede('usuarios.administrar') %}
+  <section class="gx-resumen animate-in" aria-label="Resumen general">
+    <div class="gx-head"><h2>Resumen general</h2><a href="{{ url_for('estadisticas') }}">Ver estadísticas completas →</a></div>
+    <div id="gx-resumen" data-datos="{{ url_for('estadisticas_datos') }}" aria-live="polite"></div>
+  </section>
+  {% endif %}
 </div>
 
+{% endblock %}
+
+{% block extra_head %}
+{% if puede('usuarios.administrar') %}<link rel="stylesheet" href="{{ url_for('static', filename='css/estadisticas.css') }}">{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if puede('usuarios.administrar') %}
+<script src="{{ url_for('static', filename='js/estadisticas.js') }}"></script>
+<script>
+  (function () {
+    var el = document.getElementById("gx-resumen");
+    if (el) SigerGX.cargarResumen(el.getAttribute("data-datos"), el);
+  })();
+</script>
+{% endif %}
 {% endblock %}
