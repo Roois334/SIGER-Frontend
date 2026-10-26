@@ -352,6 +352,8 @@ html[data-theme="light"] .bg-siger::after {
 .adm-filter-btn { white-space:nowrap; cursor:pointer; border:none; }
 .adm-clear-link { font-size:.82rem; font-weight:600; color:var(--gs); white-space:nowrap; }
 .adm-clear-link:hover { color:var(--va); }
+.adm-date-wrap { min-width:0; }
+.adm-date { display:flex; align-items:center; gap:8px; font-size:.82rem; font-weight:600; color:var(--gs); white-space:nowrap; }
 
 .adm-table-wrap {
   background:var(--card-bg); border:1px solid var(--borde); border-radius:16px;
@@ -959,6 +961,8 @@ textarea.rep-input { min-height:140px; resize:vertical; line-height:1.55; }
 .pill-st-en_atencion { color:#B388FF; background:rgba(179,136,255,.13); border-color:rgba(179,136,255,.32); }
 .pill-st-resuelto    { color:var(--ok); background:rgba(0,200,83,.12); border-color:rgba(0,200,83,.3); }
 .pill-st-descartado  { color:var(--gt); background:rgba(143,168,201,.12); border-color:rgba(143,168,201,.3); }
+.pill-st-cerrado     { color:#4DB6AC; background:rgba(77,182,172,.12); border-color:rgba(77,182,172,.3); }
+html[data-theme="light"] .pill-st-cerrado { color:#00796B; }
 html[data-theme="light"] .pill-st-asignado { color:#1565C0; }
 html[data-theme="light"] .pill-st-en_atencion { color:#6A1B9A; }
 .pill-org { color:var(--gt); background:var(--borde2); border-color:var(--borde); }

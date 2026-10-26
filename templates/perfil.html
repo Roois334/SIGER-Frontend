@@ -109,6 +109,26 @@
             </label>
           </div>
 
+          <div class="pf-row">
+            <label class="pf-field">
+              <span>Tipo de documento</span>
+              <select name="tipo_documento">
+                <option value="" {{ 'selected' if not u.get('tipo_documento') }}>Sin definir</option>
+                {% for cod, nom in tipos_documento %}<option value="{{ cod }}" {{ 'selected' if cod == u.get('tipo_documento') }}>{{ cod }} · {{ nom }}</option>{% endfor %}
+              </select>
+            </label>
+            <label class="pf-field">
+              <span>Número de documento</span>
+              <input type="text" name="documento" value="{{ u.get('documento') or '' }}" maxlength="15" placeholder="Sin puntos ni espacios">
+            </label>
+          </div>
+
+          <label class="pf-field">
+            <span>Teléfono celular</span>
+            <input type="tel" name="telefono" value="{{ u.get('telefono') or '' }}" maxlength="16" inputmode="numeric" placeholder="3001234567" autocomplete="tel">
+            {% if not u.get('documento') or not u.get('telefono') %}<small>Completa tu documento y teléfono para tener tu perfil al día.</small>{% endif %}
+          </label>
+
           {% if es_ciudadano %}
           <label class="pf-field">
             <span>Municipio donde vives</span>

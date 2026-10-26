@@ -10,15 +10,16 @@
 
 {% block content %}
 {% set tiene_mapa = reporte.latitud is not none and reporte.longitud is not none %}
-{% set n = {'pendiente': 0, 'asignado': 1, 'en_atencion': 2, 'resuelto': 3}.get(reporte.estado, 0) %}
+{% set n = {'pendiente': 0, 'asignado': 1, 'en_atencion': 2, 'resuelto': 3, 'cerrado': 4}.get(reporte.estado, 0) %}
 {% set descartado = reporte.estado == 'descartado' %}
 {% set pasos = [
   ('Reporte recibido', 'El incidente quedó registrado en el sistema.'),
   ('Aceptado y asignado', ('Un gestor lo aceptó y lo asignó a ' ~ reporte.organismo ~ '.') if reporte.organismo else 'El gestor del municipio lo revisará y lo asignará a un organismo.'),
   ('En atención', 'El organismo está atendiendo la emergencia.'),
-  ('Resuelto', 'La emergencia fue atendida.')
+  ('Resuelto', 'La emergencia fue atendida.'),
+  ('Cerrado', 'El gestor confirmó el cierre de la emergencia.')
 ] %}
-{% set accion_txt = {'asignar': 'Aceptado y asignado', 'reasignar': 'Reasignado', 'iniciar': 'Atención iniciada', 'resolver': 'Marcado como resuelto', 'devolver': 'Devuelto al gestor', 'descartar': 'Reporte descartado'} %}
+{% set accion_txt = {'asignar': 'Aceptado y asignado', 'reasignar': 'Reasignado', 'iniciar': 'Atención iniciada', 'resolver': 'Marcado como resuelto', 'devolver': 'Devuelto al gestor', 'descartar': 'Reporte descartado', 'cerrar': 'Emergencia cerrada', 'reclasificar': 'Tipo reclasificado'} %}
 {% set ac = reporte.acciones or {} %}
 {% set es_staff = session['usuario']['rol'] != 'ciudadano' %}
 
@@ -66,7 +67,7 @@
 
   <div class="det-layout">
     <div class="det-col">
-      {% if ac.asignar or ac.descartar or ac.iniciar or ac.devolver or ac.resolver %}
+      {% if ac.asignar or ac.descartar or ac.iniciar or ac.devolver or ac.resolver or ac.cerrar or ac.reclasificar %}
       <section class="det-card act-card animate-in" id="panel-acciones">
         <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.5V5l-8-3-8 3v5.5C4 17.5 12 22 12 22z"/><path d="M9 12l2 2 4-4"/></svg>{{ 'Atender esta emergencia' if (ac.iniciar or ac.resolver or ac.devolver) else 'Gestionar este reporte' }}</h3>
 
@@ -91,7 +92,26 @@
             <div class="rep-field">
               <label class="rep-label" for="act-prio">Prioridad</label>
               <select class="rep-input" id="act-prio" name="prioridad">
-                {% for v, l in prioridad_labels.items() %}<option value="{{ v }}" {% if v == reporte.prioridad %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                <option value="auto" selected>Calcular con las variables</option>
+                {% for v, l in prioridad_labels.items() %}<option value="{{ v }}">Fijar a mano: {{ l }}</option>{% endfor %}
+              </select>
+              <small class="act-hint">Prioridad actual: <b>{{ prioridad_labels.get(reporte.prioridad, reporte.prioridad) }}</b></small>
+            </div>
+          </div>
+          <div class="act-row">
+            <div class="rep-field">
+              <label class="rep-label" for="act-vias">Vías afectadas <small>(cantidad)</small></label>
+              <input type="text" class="rep-input" id="act-vias" name="vias_afectadas" maxlength="3" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" pattern="[0-9]*" value="{{ reporte.vias_afectadas if reporte.vias_afectadas is not none else '' }}">
+            </div>
+            <div class="rep-field">
+              <label class="rep-label" for="act-area">Área afectada <small>(m²)</small></label>
+              <input type="text" class="rep-input" id="act-area" name="area_afectada" maxlength="8" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" pattern="[0-9]*" value="{{ reporte.area_afectada if reporte.area_afectada is not none else '' }}">
+            </div>
+            <div class="rep-field">
+              <label class="rep-label" for="act-riesgo">Riesgo de propagación</label>
+              <select class="rep-input" id="act-riesgo" name="riesgo_propagacion">
+                <option value="">Sin evaluar</option>
+                {% for v, l in [('bajo', 'Bajo'), ('medio', 'Medio'), ('alto', 'Alto')] %}<option value="{{ v }}" {% if v == reporte.riesgo_propagacion %}selected{% endif %}>{{ l }}</option>{% endfor %}
               </select>
             </div>
           </div>
@@ -132,6 +152,19 @@
         </form>
         {% endif %}
 
+        {% if ac.cerrar %}
+        <p class="act-help">El organismo marcó esta emergencia como <b>resuelta</b>. Revisa lo realizado y, si todo está en orden, <b>ciérrala</b>: quedará registrada en el historial con tu nombre y la fecha.</p>
+        <form method="POST" action="{{ url_for('reporte_estado', reporte_id=reporte.id) }}" class="act-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="accion" value="cerrar">
+          <div class="rep-field">
+            <label class="rep-label" for="act-cer">Observación de cierre <small>(opcional)</small></label>
+            <textarea class="rep-input act-text" id="act-cer" name="comentario" maxlength="250" placeholder="Ej: Verificado en terreno, sin novedades."></textarea>
+          </div>
+          <button type="submit" class="btn-cta act-btn" onclick="return confirm('¿Cerrar esta emergencia? Ya no aparecerá como incidente activo.');">Cerrar emergencia</button>
+        </form>
+        {% endif %}
+
         {% if ac.devolver %}
         <details class="act-more">
           <summary>No puedo atender este reporte</summary>
@@ -143,6 +176,27 @@
               <textarea class="rep-input act-text" id="act-dev" name="comentario" required minlength="5" maxlength="250" placeholder="Ej: No tenemos unidades disponibles en este momento."></textarea>
             </div>
             <button type="submit" class="act-btn act-danger" onclick="return confirm('¿Devolver este reporte al gestor municipal?');">Devolver al gestor</button>
+          </form>
+        </details>
+        {% endif %}
+
+        {% if ac.reclasificar and tipos_cambio %}
+        <details class="act-more">
+          <summary>Cambiar el tipo de emergencia</summary>
+          <p class="act-hint">Tipo actual: <b>{{ reporte.tipo|tipo_bonito }}</b>. La prioridad no cambia sola; ajústala al asignar.</p>
+          <form method="POST" action="{{ url_for('reporte_tipo', reporte_id=reporte.id) }}" class="act-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="rep-field">
+              <label class="rep-label" for="act-tipo">Nuevo tipo *</label>
+              <select class="rep-input" id="act-tipo" name="tipo" required>
+                {% for t in tipos_cambio %}<option value="{{ t }}" {% if t == reporte.tipo %}selected{% endif %}>{{ t|tipo_bonito }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="rep-field">
+              <label class="rep-label" for="act-tipo-motivo">Motivo del cambio *</label>
+              <textarea class="rep-input act-text" id="act-tipo-motivo" name="comentario" required minlength="5" maxlength="200" placeholder="Ej: Al llegar se confirmó que era una fuga de gas, no un incendio."></textarea>
+            </div>
+            <button type="submit" class="btn-cta act-btn" onclick="return confirm('¿Cambiar el tipo de esta emergencia? Quedará registrado en el historial.');">Guardar nuevo tipo</button>
           </form>
         </details>
         {% endif %}
@@ -217,6 +271,10 @@
           <div><dt>Fecha y hora</dt><dd>{{ reporte.fecha_hora|fecha_hora }}</dd></div>
           <div><dt>Municipio</dt><dd>{{ reporte.municipio or '—' }}</dd></div>
           <div><dt>Personas afectadas</dt><dd>{{ reporte.afectados }}</dd></div>
+          <div><dt>Heridos</dt><dd>{{ reporte.heridos or 0 }}</dd></div>
+          {% if es_staff and reporte.vias_afectadas is not none %}<div><dt>Vías afectadas</dt><dd>{{ reporte.vias_afectadas }}</dd></div>{% endif %}
+          {% if es_staff and reporte.area_afectada is not none %}<div><dt>Área afectada</dt><dd>{{ reporte.area_afectada }} m²</dd></div>{% endif %}
+          {% if es_staff and reporte.riesgo_propagacion %}<div><dt>Riesgo de propagación</dt><dd>{{ reporte.riesgo_propagacion|capitalize }}</dd></div>{% endif %}
           <div><dt>Prioridad</dt><dd><span class="pill pill-{{ reporte.prioridad }}">{{ prioridad_labels.get(reporte.prioridad, reporte.prioridad) }}</span></dd></div>
           <div><dt>Estado</dt><dd><span class="pill pill-st-{{ reporte.estado }}">{{ estado_labels.get(reporte.estado, reporte.estado) }}</span></dd></div>
           <div><dt>Organismo asignado</dt><dd>{{ reporte.organismo or 'Sin asignar' }}</dd></div>

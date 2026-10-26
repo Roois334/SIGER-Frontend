@@ -208,6 +208,14 @@ def restablecer_password(token):
     return render_template("restablecer.html", valido=True, email=info.get("email"), minutos=info.get("minutos"))
 
 
+TIPOS_DOCUMENTO = [
+    ("CC", "Cédula de ciudadanía"),
+    ("CE", "Cédula de extranjería"),
+    ("TI", "Tarjeta de identidad"),
+    ("PP", "Pasaporte"),
+]
+
+
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
     if "usuario" in session:
@@ -219,19 +227,24 @@ def registro():
             "apellido": request.form.get("apellido", "").strip(),
             "email": request.form.get("email", "").strip().lower(),
             "municipio": request.form.get("municipio", "").strip(),
+            "tipo_documento": request.form.get("tipo_documento", "").strip(),
+            "documento": request.form.get("documento", "").strip(),
+            "telefono": request.form.get("telefono", "").strip(),
             "password": request.form.get("password", ""),
         }
         confirmar = request.form.get("confirmar", "")
 
         if payload["password"] != confirmar:
             flash("Las contrasenas no coinciden", "error")
-            return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE)
+            return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE,
+                           tipos_documento=TIPOS_DOCUMENTO, v=request.form)
 
         try:
             r = requests.post(BACKEND_URL + "/api/auth/register", json=payload, timeout=5)
         except requests.exceptions.ConnectionError:
             flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
-            return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE)
+            return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE,
+                           tipos_documento=TIPOS_DOCUMENTO, v=request.form)
 
         if r.status_code == 201:
             data = r.json()
@@ -243,7 +256,8 @@ def registro():
 
         flash(r.json().get("error", "No se pudo crear la cuenta"), "error")
 
-    return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE)
+    return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE,
+                           tipos_documento=TIPOS_DOCUMENTO, v=request.form)
 
 
 @app.route("/dashboard")
@@ -265,7 +279,7 @@ def perfil():
             miembro_desde = datos.get("fecha_creacion")
     except requests.exceptions.ConnectionError:
         pass
-    return render_template("perfil.html", miembro_desde=miembro_desde,
+    return render_template("perfil.html", miembro_desde=miembro_desde, tipos_documento=TIPOS_DOCUMENTO,
                             municipios=MUNICIPIOS_SABANA_OCCIDENTE,
                             role_label=ROLE_LABELS.get(session["usuario"]["rol"], session["usuario"]["rol"]))
 
@@ -292,7 +306,10 @@ def _perfil_accion(metodo, ruta, payload, mensaje_ok, ancla):
 @app.route("/perfil/datos", methods=["POST"])
 @login_required
 def perfil_datos():
-    payload = {"nombre": request.form.get("nombre", ""), "apellido": request.form.get("apellido", "")}
+    payload = {"nombre": request.form.get("nombre", ""), "apellido": request.form.get("apellido", ""),
+               "tipo_documento": request.form.get("tipo_documento", ""),
+               "documento": request.form.get("documento", ""),
+               "telefono": request.form.get("telefono", "")}
     if "municipio" in request.form:
         payload["municipio"] = request.form.get("municipio", "")
     return _perfil_accion("PUT", "/api/usuarios/me", payload, "Tus datos se guardaron", "datos")
@@ -686,6 +703,7 @@ ESTADO_LABELS = {
     "asignado": "Asignado",
     "en_atencion": "En atención",
     "resuelto": "Resuelto",
+    "cerrado": "Cerrado",
     "descartado": "Descartado",
 }
 
@@ -731,6 +749,7 @@ def reportar_emergencia():
             "longitud": request.form.get("longitud", ""),
             "descripcion": request.form.get("descripcion", "").strip(),
             "afectados": request.form.get("afectados", "0"),
+            "heridos": request.form.get("heridos", "0"),
         }
 
         archivos = [
@@ -804,7 +823,10 @@ def reporte_detalle(reporte_id):
         return redirect(url_for(volver))
 
     reporte = r.json()["reporte"]
-    return render_template("reporte_detalle.html", reporte=reporte,
+    tipos_cambio = []
+    if reporte.get("acciones", {}).get("reclasificar"):
+        tipos_cambio = [t["nombre"] for t in _config_reporte()["tipos"]]
+    return render_template("reporte_detalle.html", reporte=reporte, tipos_cambio=tipos_cambio,
                             nuevo=request.args.get("nuevo") == "1",
                             es_dueno=reporte["ciudadano_id"] == session["usuario"]["id"],
                             volver_endpoint=volver,
@@ -838,6 +860,9 @@ def reporte_asignar(reporte_id):
         "organismo_id": request.form.get("organismo_id", type=int),
         "prioridad": request.form.get("prioridad", "").strip(),
         "comentario": request.form.get("comentario", "").strip(),
+        "vias_afectadas": request.form.get("vias_afectadas", "").strip(),
+        "area_afectada": request.form.get("area_afectada", "").strip(),
+        "riesgo_propagacion": request.form.get("riesgo_propagacion", "").strip(),
     }
     return _accion_reporte(reporte_id, "asignar", payload,
                            "Reporte aceptado y asignado. El organismo ya puede verlo")
@@ -846,6 +871,7 @@ def reporte_asignar(reporte_id):
 MENSAJES_ACCION = {
     "iniciar": "Atención iniciada. El ciudadano puede ver el avance",
     "resolver": "Reporte marcado como resuelto",
+    "cerrar": "Emergencia cerrada. Quedó registrada en el historial",
     "devolver": "Reporte devuelto al gestor municipal",
     "descartar": "Reporte descartado",
 }
@@ -861,6 +887,16 @@ def reporte_estado(reporte_id):
         return redirect(url_for("reporte_detalle", reporte_id=reporte_id))
     payload = {"accion": accion, "comentario": request.form.get("comentario", "").strip()}
     return _accion_reporte(reporte_id, "estado", payload, MENSAJES_ACCION[accion])
+
+
+@app.route("/reportes/<int:reporte_id>/tipo", methods=["POST"])
+@login_required
+def reporte_tipo(reporte_id):
+    """El gestor corrige el tipo de una emergencia abierta. El backend valida permisos y estado."""
+    payload = {"tipo": request.form.get("tipo", "").strip(),
+               "comentario": request.form.get("comentario", "").strip()}
+    return _accion_reporte(reporte_id, "tipo", payload,
+                           "Tipo de emergencia actualizado. Quedó registrado en el historial")
 
 
 @app.route("/evidencias/<int:evidencia_id>")
@@ -953,6 +989,8 @@ def gestion_emergencias():
         "estado": request.args.get("estado", ""),
         "prioridad": request.args.get("prioridad", ""),
         "municipio_id": request.args.get("municipio_id", ""),
+        "desde": request.args.get("desde", "").strip(),
+        "hasta": request.args.get("hasta", "").strip(),
     }
     params = {k: v for k, v in filtros.items() if v}
     tipos = [t["nombre"] for t in _config_reporte()["tipos"]]
@@ -1105,6 +1143,17 @@ def sesion_expirada(e):
     session.clear()
     flash("Tu sesion expiro o tu cuenta fue desactivada. Ingresa de nuevo", "error")
     return redirect(url_for("login"))
+
+
+@app.after_request
+def no_guardar_en_cache(respuesta):
+    """Las paginas HTML no se guardan en el cache del navegador: al cerrar sesion,
+    el boton Atras no puede mostrar contenido privado."""
+    if respuesta.mimetype == "text/html":
+        respuesta.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        respuesta.headers["Pragma"] = "no-cache"
+        respuesta.headers["Expires"] = "0"
+    return respuesta
 
 
 @app.errorhandler(404)
