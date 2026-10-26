@@ -269,6 +269,7 @@
         <dl class="det-dl">
           <div><dt>Identificador</dt><dd>{{ reporte.folio }}</dd></div>
           <div><dt>Fecha y hora</dt><dd>{{ reporte.fecha_hora|fecha_hora }}</dd></div>
+          <div><dt>Última actualización</dt><dd>{{ reporte.fecha_actualizacion|fecha_hora }}</dd></div>
           <div><dt>Municipio</dt><dd>{{ reporte.municipio or '—' }}</dd></div>
           <div><dt>Personas afectadas</dt><dd>{{ reporte.afectados }}</dd></div>
           <div><dt>Heridos</dt><dd>{{ reporte.heridos or 0 }}</dd></div>
