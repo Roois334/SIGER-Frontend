@@ -8,14 +8,27 @@
 {% block content %}
 <div class="container">
   <div class="dash-hero animate-in">
-    <div class="pg-crumbs"><a href="{{ url_for('dashboard') }}">Panel</a><span>/</span><span>Mapa de emergencias</span></div>
+    {% if publico %}<div class="pg-crumbs"><a href="{{ url_for('index') }}">Inicio</a><span>/</span><span>Mapa de emergencias</span></div>
+    {% else %}<div class="pg-crumbs"><a href="{{ url_for('dashboard') }}">Panel</a><span>/</span><span>Mapa de emergencias</span></div>{% endif %}
     <h1 class="dash-title">Mapa de emergencias</h1>
     <p class="dash-sub">
-      {% if es_organismo %}Ubicación de las emergencias que el gestor asignó a tu organismo.
-      {% elif es_ciudadano %}Ubicación y estado de las emergencias que has reportado. Elige un municipio para ir a él.
+      {% if publico %}Emergencias confirmadas por las autoridades de la Sabana de Occidente, con su ubicación aproximada.
+      {% elif es_organismo %}Ubicación de las emergencias que el gestor asignó a tu organismo.
+      {% elif es_ciudadano %}Tus reportes y las emergencias activas de la comunidad, con ubicación aproximada para proteger la privacidad. Elige un municipio para ir a él.
       {% else %}Ubicación, prioridad y estado de los incidentes para ver su distribución en el territorio.{% endif %}
     </p>
   </div>
+
+  {% if publico %}
+  <div class="mp-pub animate-in">
+    <p><b>Mapa público.</b> Solo se muestran emergencias ya revisadas por el gestor municipal y abiertas, con la ubicación aproximada.
+      Para reportar una emergencia o seguir tus reportes, crea una cuenta.</p>
+    <div class="mp-pub-actions">
+      <a href="{{ url_for('registro') }}" class="btn-cta">Crear cuenta</a>
+      <a href="{{ url_for('login') }}" class="rep-btn-ghost">Ingresar</a>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Prioridades (clic para mostrar u ocultar) + estado de la actualización -->
   <div class="mp-bar animate-in">
@@ -40,15 +53,21 @@
   </div>
 
   <div class="mp-filters animate-in">
-    <input type="search" id="f-q" class="rep-input" placeholder="Buscar por código, tipo o dirección…" autocomplete="off">
+    <input type="search" id="f-q" class="rep-input" placeholder="{{ 'Buscar por tipo o municipio…' if publico else 'Buscar por código, tipo o dirección…' }}" autocomplete="off">
     <select id="f-tipo" class="rep-input">
       <option value="">Todos los tipos</option>
       {% for t in tipos %}<option value="{{ t }}">{{ t|tipo_bonito }}</option>{% endfor %}
     </select>
     <select id="f-estado" class="rep-input">
+      {% if publico %}
+      <option value="activas">Todas las abiertas</option>
+      <option value="asignado">{{ estado_labels['asignado'] }}</option>
+      <option value="en_atencion">{{ estado_labels['en_atencion'] }}</option>
+      {% else %}
       <option value="activas">Solo activas</option>
       <option value="todas">Todos los estados</option>
       {% for valor, etiqueta in estado_labels.items() %}<option value="{{ valor }}">{{ etiqueta }}</option>{% endfor %}
+      {% endif %}
     </select>
     <select id="f-municipio" class="rep-input" aria-label="Ir a un municipio">
       <option value="">Toda la región</option>
@@ -92,7 +111,7 @@
 
 <div class="mp-toast" id="mp-toast" role="status" aria-live="polite" hidden></div>
 
-<script type="application/json" id="mp-cfg">{{ {"datos": url_for('mapa_datos'), "detalle": url_for('reporte_detalle', reporte_id=0), "login": url_for('login'), "prioridades": prioridad_labels, "estados": estado_labels}|tojson }}</script>
+<script type="application/json" id="mp-cfg">{{ {"datos": url_for('mapa_datos'), "detalle": ("" if publico else url_for('reporte_detalle', reporte_id=0)), "publico": (true if publico else false), "login": url_for('login'), "prioridades": prioridad_labels, "estados": estado_labels}|tojson }}</script>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -103,6 +122,8 @@
 
   var CFG = JSON.parse(document.getElementById("mp-cfg").textContent);
   var INTERVALO = 30000;
+  var PUBLICO = !!CFG.publico;
+  var CLAVE_GUARDADO = "siger-mapa" + (PUBLICO ? "-pub" : "");
   var ACTIVAS = ["pendiente", "asignado", "en_atencion"];
   var ORDEN_PRIO = { critica: 0, alta: 1, media: 2, baja: 3 };
   var TAM = { critica: 46, alta: 42, media: 38, baja: 34 };
@@ -172,7 +193,7 @@
   var filtros = { prio: { critica: true, alta: true, media: true, baja: true }, q: "", tipo: "", estado: "activas", municipio: "", orden: "prioridad" };
 
   try {
-    var g = JSON.parse(localStorage.getItem("siger-mapa") || "null");
+    var g = JSON.parse(localStorage.getItem(CLAVE_GUARDADO) || "null");
     if (g) {
       if (g.prio) Object.keys(filtros.prio).forEach(function (k) { if (typeof g.prio[k] === "boolean") filtros.prio[k] = g.prio[k]; });
       if (g.estado) filtros.estado = g.estado;
@@ -181,7 +202,7 @@
     }
   } catch (e) {}
   function guardar() {
-    try { localStorage.setItem("siger-mapa", JSON.stringify({ prio: filtros.prio, estado: filtros.estado, orden: filtros.orden, auto: auto })); } catch (e) {}
+    try { localStorage.setItem(CLAVE_GUARDADO, JSON.stringify({ prio: filtros.prio, estado: filtros.estado, orden: filtros.orden, auto: auto })); } catch (e) {}
   }
 
   /* ---------------------------------------------------------- mapa */
@@ -234,7 +255,20 @@
     return L.divIcon({ className: "mk-wrap", html: html, iconSize: [t, t], iconAnchor: [t / 2, t * 1.2], popupAnchor: [0, -t * 1.1] });
   }
 
+  function popupPublico(r) {
+    return '<div class="pp">' +
+      '<div class="pp-head"><span class="pp-ico mk-' + esc(r.prioridad) + '">' + svg(r.tipo, 18) + '</span>' +
+      '<div><b>' + esc(r.tipo_nombre || r.tipo) + '</b><span class="pp-folio">Reporte de la comunidad</span></div></div>' +
+      '<div class="pp-pills"><span class="pill pill-' + esc(r.prioridad) + '">' + esc(CFG.prioridades[r.prioridad] || r.prioridad) + '</span>' +
+      '<span class="pill pill-st-' + esc(r.estado) + '">' + esc(CFG.estados[r.estado] || r.estado) + '</span></div>' +
+      '<dl class="pp-dl">' +
+      '<div><dt>Municipio</dt><dd>' + esc(r.municipio || '—') + '</dd></div>' +
+      '<div><dt>Reportada</dt><dd>' + esc(fmtFecha(r.fecha_hora)) + ' <small>(' + esc(hace(r.fecha_hora)) + ')</small></dd></div></dl>' +
+      '<p class="pp-desc">Ubicación aproximada. Evita la zona si puedes y sigue las indicaciones de las autoridades.</p></div>';
+  }
+
   function popupHtml(r) {
+    if (PUBLICO || r.publico) return popupPublico(r);
     return '<div class="pp">' +
       '<div class="pp-head"><span class="pp-ico mk-' + esc(r.prioridad) + '">' + svg(r.tipo, 18) + '</span>' +
       '<div><b>' + esc(r.tipo_nombre || r.tipo) + '</b><a class="pp-folio" href="' + esc(CFG.detalle.replace(/0$/, r.id)) + '">' + esc(r.folio) + "</a></div></div>" +
@@ -258,7 +292,7 @@
     else if (filtros.estado !== "todas" && r.estado !== filtros.estado) return false;
     if (filtros.q) {
       var q = norm(filtros.q);
-      if (norm(r.folio + " " + r.tipo + " " + (r.tipo_nombre || "") + " " + r.direccion + " " + (r.municipio || "")).indexOf(q) === -1) return false;
+      if (norm((r.folio || "") + " " + r.tipo + " " + (r.tipo_nombre || "") + " " + (r.direccion || "") + " " + (r.municipio || "")).indexOf(q) === -1) return false;
     }
     return true;
   }
@@ -290,7 +324,7 @@
       var firma = [r.prioridad, r.estado, r.tipo, r.latitud, r.longitud].join("|");
       var m = marcadores[r.id];
       if (!m) {
-        var mk = L.marker([r.latitud, r.longitud], { icon: iconoDe(r), riseOnHover: true, keyboard: true, title: (r.tipo_nombre || r.tipo) + " · " + r.folio });
+        var mk = L.marker([r.latitud, r.longitud], { icon: iconoDe(r), riseOnHover: true, keyboard: true, title: (r.tipo_nombre || r.tipo) + (r.folio ? " · " + r.folio : "") });
         mk.bindPopup(popupHtml(r), { maxWidth: 320, minWidth: 250, className: "mp-popup", autoPanPadding: [30, 30] });
         mk.on("click", function () { seleccionar(r.id, false); });
         capaMarcadores.addLayer(mk);
@@ -323,8 +357,8 @@
       return '<li><button type="button" class="mp-item mk-' + esc(r.prioridad) + (String(r.id) === String(seleccionId) ? " is-sel" : "") + (nuevos && nuevos[r.id] ? " is-new" : "") + (activa(r) ? "" : " is-off") + '" data-id="' + r.id + '">' +
         '<span class="mp-item-ico">' + svg(r.tipo, 18) + "</span>" +
         '<span class="mp-item-body"><b>' + esc(r.tipo_nombre || r.tipo) + (nuevos && nuevos[r.id] ? ' <em>Nueva</em>' : "") + "</b>" +
-        "<small>" + esc(r.folio) + " · " + esc(r.municipio || "—") + "</small>" +
-        "<small>" + esc((r.direccion || "").slice(0, 46)) + "</small>" +
+        "<small>" + ((PUBLICO || r.publico) ? "Reporte de la comunidad" : esc(r.folio)) + " · " + esc(r.municipio || "—") + "</small>" +
+        "<small>" + ((PUBLICO || r.publico) ? "Ubicación aproximada" : esc((r.direccion || "").slice(0, 46))) + "</small>" +
         '<span class="mp-item-meta"><span class="pill pill-st-' + esc(r.estado) + '">' + esc(CFG.estados[r.estado] || r.estado) + "</span><time>" + esc(hace(r.fecha_hora)) + "</time>" + (sin ? '<span class="mp-sin">Sin ubicación</span>' : "") + "</span></span></button></li>";
     }).join("");
   }
@@ -480,7 +514,7 @@
     var b = e.target.closest(".mp-item"); if (!b) return;
     var id = b.getAttribute("data-id"), r = todos.filter(function (x) { return String(x.id) === id; })[0];
     if (r && tieneCoord(r)) seleccionar(id, true);
-    else if (r) window.location = CFG.detalle.replace(/0$/, r.id);
+    else if (r && !PUBLICO && !r.publico) window.location = CFG.detalle.replace(/0$/, r.id);
   });
 
   /* ---------------------------------------------------------- inicio */

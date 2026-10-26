@@ -14,8 +14,6 @@
     </div>
 
     <div class="lh2-inner">
-      <span class="lh2-badge"><i></i>Sabana de Occidente · 8 municipios</span>
-
       <h1 class="lh2-title">
         Cuando ocurre una emergencia,
         <span>cada minuto cuenta</span>
@@ -30,6 +28,10 @@
         <a href="{{ url_for('registro') }}" class="lh2-btn lh2-btn-main">Crear cuenta</a>
         <a href="{{ url_for('login') }}" class="lh2-btn lh2-btn-ghost">Ya tengo cuenta</a>
       </div>
+      <a href="{{ url_for('mapa_emergencias') }}" class="lh2-maplink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Ver el mapa de emergencias sin registrarte
+      </a>
 
       <div class="lh2-stats">
         <div><b>8</b><span>Municipios</span></div>

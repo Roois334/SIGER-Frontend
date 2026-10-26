@@ -62,34 +62,47 @@
     </a>
     {% endif %}
 
-    {% if puede('emergencias.consultar') %}
+    {% if puede('mapa.ver') %}
     <a href="{{ url_for('mapa_emergencias') }}" class="dash-card dash-card-link">
       <div class="dash-card-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
       </div>
       <h3>Mapa de emergencias</h3>
-      <p>Visualiza en el mapa los incidentes{% if session['usuario']['rol'] == 'organismo_atencion' %} asignados a tu organismo{% else %} activos{% endif %}, su prioridad y su distribución territorial.</p>
+      <p>Visualiza en el mapa los incidentes{% if session['usuario']['rol'] == 'organismo_atencion' %} asignados a tu organismo{% elif session['usuario']['rol'] == 'ciudadano' %} activos de la comunidad (con ubicación aproximada) y los tuyos{% else %} activos{% endif %}, su prioridad y su distribución territorial.</p>
+      <span class="dash-card-tag dash-card-tag-live">Disponible</span>
+    </a>
+    {% endif %}
+
+    {% if puede('dashboard.ver') %}
+    <a href="{{ url_for('tablero') }}" class="dash-card dash-card-link">
+      <div class="dash-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      </div>
+      <h3>Dashboard general</h3>
+      <p>Resumen en vivo de la región: total, activas, cerradas, prioridad, frecuencia y municipios más afectados.</p>
+      <span class="dash-card-tag dash-card-tag-live">Disponible</span>
+    </a>
+    {% endif %}
+
+    {% if puede('estadisticas.ver') %}
+    <a href="{{ url_for('estadisticas') }}" class="dash-card dash-card-link">
+      <div class="dash-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+      </div>
+      <h3>Estadísticas</h3>
+      <p>Consulta tendencias por tipo de emergencia, municipio, prioridad y estado{% if session['usuario']['rol'] != 'administrador' %} en tu municipio{% endif %}.</p>
       <span class="dash-card-tag dash-card-tag-live">Disponible</span>
     </a>
     {% else %}
-    <div class="dash-card">
-      <div class="dash-card-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      </div>
-      <h3>Mapa de emergencias</h3>
-      <p>Visualiza en el mapa los incidentes activos en los municipios de la Sabana de Occidente.</p>
-      <span class="dash-card-tag">Próximamente</span>
-    </div>
-    {% endif %}
-
     <div class="dash-card">
       <div class="dash-card-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
       </div>
       <h3>Estadísticas</h3>
       <p>Consulta tendencias por tipo de emergencia, municipio, prioridad y estado.</p>
-      <span class="dash-card-tag">Próximamente</span>
+      <span class="dash-card-tag">Solo gestores</span>
     </div>
+    {% endif %}
 
     {% if puede('usuarios.administrar') %}
     <a href="{{ url_for('admin_usuarios') }}" class="dash-card dash-card-link">

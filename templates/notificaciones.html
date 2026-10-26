@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Notificaciones — SIGER{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="dash-hero animate-in">
+    <div class="pg-crumbs"><a href="{{ url_for('dashboard') }}">Panel</a><span>/</span><span>Notificaciones</span></div>
+    <h1 class="dash-title">Notificaciones</h1>
+    <p class="dash-sub">Los cambios importantes de las emergencias en las que estás involucrado, para que no tengas que revisar la plataforma a cada rato.</p>
+  </div>
+
+  <div class="nf-tools animate-in">
+    <div class="nf-tabs" role="tablist">
+      <a href="{{ url_for('notificaciones') }}" class="nf-tab {{ '' if solo else 'is-on' }}">Todas</a>
+      <a href="{{ url_for('notificaciones', filtro='no_leidas') }}" class="nf-tab {{ 'is-on' if solo else '' }}">Sin leer{% if no_leidas %} <b>{{ no_leidas }}</b>{% endif %}</a>
+    </div>
+    {% if no_leidas %}
+    <form method="post" action="{{ url_for('notificaciones_leer_todas') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="rep-btn-ghost">Marcar todas como leídas</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if notificaciones %}
+  <ul class="nf-cards animate-in">
+    {% for n in notificaciones %}
+    <li>
+      <a href="{{ url_for('notificacion_abrir', notificacion_id=n.id) }}" class="nf-card nf-t-{{ n.tipo }} {{ '' if n.leida else 'is-new' }}">
+        <span class="nf-dot" aria-hidden="true"></span>
+        <span class="nf-card-body">
+          <b>{{ n.titulo }}</b>
+          <span>{{ n.mensaje }}</span>
+          <small>{% if n.folio %}{{ n.folio }} · {% endif %}{{ n.fecha_creacion|fecha_hora }}</small>
+        </span>
+        {% if not n.leida %}<em class="nf-new">Nueva</em>{% endif %}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="nf-vacio animate-in">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="34" height="34"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <b>{{ 'No tienes notificaciones sin leer' if solo else 'Aún no tienes notificaciones' }}</b>
+    <span>Cuando ocurra un cambio en una de tus emergencias, te avisaremos aquí.</span>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
