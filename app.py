@@ -1,4 +1,4 @@
-﻿import os
+import os
 import time
 from datetime import datetime
 from utilities.api import requests, SesionExpirada
@@ -889,6 +889,15 @@ def reporte_estado(reporte_id):
     return _accion_reporte(reporte_id, "estado", payload, MENSAJES_ACCION[accion])
 
 
+@app.route("/reportes/<int:reporte_id>/apoyo", methods=["POST"])
+@login_required
+def reporte_apoyo(reporte_id):
+    """El gestor define los organismos de apoyo de la emergencia. El backend valida."""
+    payload = {"organismo_ids": request.form.getlist("organismo_ids", type=int)}
+    return _accion_reporte(reporte_id, "apoyo", payload,
+                           "Organismos de apoyo actualizados. Quedó registrado en el historial")
+
+
 @app.route("/reportes/<int:reporte_id>/tipo", methods=["POST"])
 @login_required
 def reporte_tipo(reporte_id):
@@ -1005,6 +1014,21 @@ def mapa_datos():
             "afectados": x.get("afectados", 0),
             "descripcion": (x.get("descripcion") or "")[:160],
         })
+    if session["usuario"]["rol"] == "ciudadano":
+        # Emergencias activas de otras personas: el backend ya las entrega recortadas (sin datos personales)
+        try:
+            rp = requests.get(BACKEND_URL + "/api/reportes/publico", headers=_auth_headers(), timeout=8)
+            if rp.status_code == 200:
+                for x in rp.json().get("reportes", []):
+                    reportes.append({
+                        "id": x["ref"], "publico": True, "folio": "", "tipo": x["tipo"],
+                        "tipo_nombre": filtro_tipo_bonito(x["tipo"]), "prioridad": x["prioridad"],
+                        "estado": x["estado"], "latitud": x["latitud"], "longitud": x["longitud"],
+                        "direccion": "", "municipio": x.get("municipio"), "fecha_hora": x.get("fecha_hora"),
+                        "organismo": None, "afectados": None, "descripcion": "",
+                    })
+        except requests.exceptions.RequestException:
+            pass  # si falla, el ciudadano igual ve sus propios reportes
     respuesta = jsonify({"reportes": reportes})
     respuesta.headers["Cache-Control"] = "no-store"
     return respuesta

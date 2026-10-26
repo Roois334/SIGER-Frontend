@@ -34,6 +34,7 @@
           <th>Folio</th>
           <th>Municipio</th>
           <th>Fecha</th>
+          <th>Actualizado</th>
           <th>Prioridad</th>
           <th>Estado</th>
           <th>Adjuntos</th>
@@ -53,6 +54,7 @@
           <td><a class="lst-folio" href="{{ url_for('reporte_detalle', reporte_id=r.id) }}">{{ r.folio }}</a></td>
           <td>{{ r.municipio or "—" }}</td>
           <td>{{ r.fecha_hora|fecha_hora }}</td>
+          <td>{{ r.fecha_actualizacion|fecha_hora }}</td>
           <td><span class="pill pill-{{ r.prioridad }}">{{ prioridad_labels.get(r.prioridad, r.prioridad) }}</span></td>
           <td><span class="pill pill-st-{{ r.estado }}">{{ estado_labels.get(r.estado, r.estado) }}</span></td>
           <td>{{ r.evidencias|length if r.evidencias else '—' }}</td>

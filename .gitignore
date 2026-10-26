@@ -2,6 +2,8 @@
 __pycache__/
 *.pyc
 instance/
+.env
+.env.*
 *.db
 .vs/
 _respaldo_codigo/

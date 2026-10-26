@@ -14,7 +14,7 @@
     <p class="dash-sub">
       {% if publico %}Emergencias confirmadas por las autoridades de la Sabana de Occidente, con su ubicación aproximada.
       {% elif es_organismo %}Ubicación de las emergencias que el gestor asignó a tu organismo.
-      {% elif es_ciudadano %}Ubicación y estado de las emergencias que has reportado. Elige un municipio para ir a él.
+      {% elif es_ciudadano %}Tus reportes y las emergencias activas de la comunidad, con ubicación aproximada para proteger la privacidad. Elige un municipio para ir a él.
       {% else %}Ubicación, prioridad y estado de los incidentes para ver su distribución en el territorio.{% endif %}
     </p>
   </div>
@@ -258,17 +258,17 @@
   function popupPublico(r) {
     return '<div class="pp">' +
       '<div class="pp-head"><span class="pp-ico mk-' + esc(r.prioridad) + '">' + svg(r.tipo, 18) + '</span>' +
-      '<div><b>' + esc(r.tipo_nombre || r.tipo) + '</b></div></div>' +
+      '<div><b>' + esc(r.tipo_nombre || r.tipo) + '</b><span class="pp-folio">Reporte de la comunidad</span></div></div>' +
       '<div class="pp-pills"><span class="pill pill-' + esc(r.prioridad) + '">' + esc(CFG.prioridades[r.prioridad] || r.prioridad) + '</span>' +
-      '<span class="pill pill-st-' + esc(r.estado) + '">' + esc(CFG.estados[r.estado] || r.estado) + "</span></div>" +
+      '<span class="pill pill-st-' + esc(r.estado) + '">' + esc(CFG.estados[r.estado] || r.estado) + '</span></div>' +
       '<dl class="pp-dl">' +
-      "<div><dt>Municipio</dt><dd>" + esc(r.municipio || "—") + "</dd></div>" +
-      "<div><dt>Reportada</dt><dd>" + esc(fmtFecha(r.fecha_hora)) + " <small>(" + esc(hace(r.fecha_hora)) + ")</small></dd></div></dl>" +
-      '<p class="pp-pub">Ubicación aproximada.</p></div>';
+      '<div><dt>Municipio</dt><dd>' + esc(r.municipio || '—') + '</dd></div>' +
+      '<div><dt>Reportada</dt><dd>' + esc(fmtFecha(r.fecha_hora)) + ' <small>(' + esc(hace(r.fecha_hora)) + ')</small></dd></div></dl>' +
+      '<p class="pp-desc">Ubicación aproximada. Evita la zona si puedes y sigue las indicaciones de las autoridades.</p></div>';
   }
 
   function popupHtml(r) {
-    if (PUBLICO) return popupPublico(r);
+    if (PUBLICO || r.publico) return popupPublico(r);
     return '<div class="pp">' +
       '<div class="pp-head"><span class="pp-ico mk-' + esc(r.prioridad) + '">' + svg(r.tipo, 18) + '</span>' +
       '<div><b>' + esc(r.tipo_nombre || r.tipo) + '</b><a class="pp-folio" href="' + esc(CFG.detalle.replace(/0$/, r.id)) + '">' + esc(r.folio) + "</a></div></div>" +
@@ -357,8 +357,8 @@
       return '<li><button type="button" class="mp-item mk-' + esc(r.prioridad) + (String(r.id) === String(seleccionId) ? " is-sel" : "") + (nuevos && nuevos[r.id] ? " is-new" : "") + (activa(r) ? "" : " is-off") + '" data-id="' + r.id + '">' +
         '<span class="mp-item-ico">' + svg(r.tipo, 18) + "</span>" +
         '<span class="mp-item-body"><b>' + esc(r.tipo_nombre || r.tipo) + (nuevos && nuevos[r.id] ? ' <em>Nueva</em>' : "") + "</b>" +
-        "<small>" + (PUBLICO ? esc(r.municipio || "—") : esc(r.folio) + " · " + esc(r.municipio || "—")) + "</small>" +
-        (PUBLICO ? "" : "<small>" + esc((r.direccion || "").slice(0, 46)) + "</small>") +
+        "<small>" + ((PUBLICO || r.publico) ? "Reporte de la comunidad" : esc(r.folio)) + " · " + esc(r.municipio || "—") + "</small>" +
+        "<small>" + ((PUBLICO || r.publico) ? "Ubicación aproximada" : esc((r.direccion || "").slice(0, 46))) + "</small>" +
         '<span class="mp-item-meta"><span class="pill pill-st-' + esc(r.estado) + '">' + esc(CFG.estados[r.estado] || r.estado) + "</span><time>" + esc(hace(r.fecha_hora)) + "</time>" + (sin ? '<span class="mp-sin">Sin ubicación</span>' : "") + "</span></span></button></li>";
     }).join("");
   }
@@ -514,7 +514,7 @@
     var b = e.target.closest(".mp-item"); if (!b) return;
     var id = b.getAttribute("data-id"), r = todos.filter(function (x) { return String(x.id) === id; })[0];
     if (r && tieneCoord(r)) seleccionar(id, true);
-    else if (r && !PUBLICO) window.location = CFG.detalle.replace(/0$/, r.id);
+    else if (r && !PUBLICO && !r.publico) window.location = CFG.detalle.replace(/0$/, r.id);
   });
 
   /* ---------------------------------------------------------- inicio */
