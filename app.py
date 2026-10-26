@@ -926,26 +926,58 @@ def ver_evidencia(evidencia_id):
 
 
 @app.route("/mapa")
-@permiso_required("mapa.ver")
 def mapa_emergencias():
-    """Mapa de emergencias (todos los roles; cada uno ve lo que le corresponde)."""
+    """
+    Mapa de emergencias. Los usuarios con sesion ven lo que les corresponde segun su rol;
+    un visitante (sin cuenta) ve el mapa PUBLICO: emergencias confirmadas, sin datos privados.
+    """
+    municipios = MUNICIPIOS_SABANA_OCCIDENTE
+    if "usuario" not in session:
+        return render_template("mapa_emergencias.html", municipios=municipios, tipos=TIPOS_EMERGENCIA,
+                                publico=True, alcance_municipal=False, es_organismo=False, es_ciudadano=False,
+                                prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
+    if not puede(session["usuario"], "mapa.ver"):
+        flash("No tienes permisos para acceder a esa seccion", "error")
+        return redirect(url_for("dashboard"))
     rol = session["usuario"]["rol"]
     alcance_municipal = tiene_alcance_municipal(rol)
-    municipios = MUNICIPIOS_SABANA_OCCIDENTE
     tipos = [t["nombre"] for t in _config_reporte()["tipos"]]
     return render_template("mapa_emergencias.html", municipios=municipios, tipos=tipos,
-                            alcance_municipal=alcance_municipal, es_organismo=(rol == "organismo_atencion"),
+                            publico=False, alcance_municipal=alcance_municipal, es_organismo=(rol == "organismo_atencion"),
                             es_ciudadano=(rol == "ciudadano"),
                             prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
 
 
+def _mapa_datos_publico():
+    """Visitante sin cuenta: solo los datos publicos que entrega el backend."""
+    try:
+        r = requests.get(BACKEND_URL + "/api/publico/mapa", timeout=8)
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "No se pudo conectar con el servidor"}), 503
+    if r.status_code != 200:
+        return jsonify({"error": "No se pudieron cargar las emergencias"}), 502
+    reportes = [{
+        "id": x["id"], "tipo": x["tipo"], "tipo_nombre": filtro_tipo_bonito(x["tipo"]),
+        "prioridad": x["prioridad"], "estado": x["estado"],
+        "latitud": x.get("latitud"), "longitud": x.get("longitud"),
+        "municipio": x.get("municipio"), "fecha_hora": x.get("fecha_hora"),
+    } for x in r.json().get("reportes", [])]
+    respuesta = jsonify({"reportes": reportes})
+    respuesta.headers["Cache-Control"] = "no-store"
+    return respuesta
+
+
 @app.route("/mapa/datos")
-@permiso_required("mapa.ver")
 def mapa_datos():
     """
     JSON liviano para el mapa (se consulta cada 30 s). El backend ya filtra por rol:
     el gestor ve su municipio y el organismo solo lo que le asignaron.
+    Sin sesion se entregan solo los datos publicos.
     """
+    if "usuario" not in session:
+        return _mapa_datos_publico()
+    if not puede(session["usuario"], "mapa.ver"):
+        return jsonify({"error": "No tienes permisos"}), 403
     try:
         # El ciudadano ve sus propios reportes; los demas roles, los de su alcance
         ruta = "/api/reportes" if session["usuario"]["rol"] == "ciudadano" else "/api/reportes/gestion"
@@ -1100,6 +1132,200 @@ ORGANISMOS_INFO = [
 def organismos_info():
     return render_template("organismos_info.html", organismos=ORGANISMOS_INFO,
                            tipos_filtro=TIPOS_FILTRO_ORGANISMOS)
+
+
+# ---------------- Estadisticas (HU-17) ----------------
+
+FILTROS_ESTADISTICAS = ("desde", "hasta", "municipio_id", "tipo", "prioridad", "estado")
+
+
+def _params_estadisticas():
+    return {k: request.args.get(k, "").strip() for k in FILTROS_ESTADISTICAS if request.args.get(k, "").strip()}
+
+
+@app.route("/estadisticas")
+@permiso_required("estadisticas.ver")
+def estadisticas():
+    es_admin = session["usuario"]["rol"] == "administrador"
+    municipios = []
+    if es_admin:
+        try:
+            r = requests.get(BACKEND_URL + "/api/municipios/activos", headers=_auth_headers(), timeout=6)
+            if r.status_code == 200:
+                municipios = r.json().get("municipios", [])
+        except requests.exceptions.ConnectionError:
+            pass
+    tipos = [{"valor": t["nombre"], "texto": filtro_tipo_bonito(t["nombre"])} for t in _config_reporte()["tipos"]]
+    return render_template("estadisticas.html", es_admin=es_admin, municipios=municipios, tipos=tipos,
+                            filtros={k: request.args.get(k, "") for k in FILTROS_ESTADISTICAS},
+                            prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS,
+                            municipio_propio=session["usuario"].get("municipio"))
+
+
+@app.route("/tablero")
+@permiso_required("dashboard.ver")
+def tablero():
+    """Dashboard general del administrador (HU-18). Usa los mismos datos que Estadisticas."""
+    return render_template("tablero.html", prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
+
+
+@app.route("/estadisticas/datos")
+@permiso_required("estadisticas.ver")
+def estadisticas_datos():
+    try:
+        r = requests.get(BACKEND_URL + "/api/estadisticas", headers=_auth_headers(),
+                         params=_params_estadisticas(), timeout=20)
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "No se pudo conectar con el servidor"}), 503
+    respuesta = jsonify(r.json() if r.status_code == 200 else {"error": r.json().get("error", "No se pudieron calcular las estadisticas")})
+    respuesta.status_code = r.status_code if r.status_code in (200, 400, 403) else 502
+    respuesta.headers["Cache-Control"] = "no-store"
+    return respuesta
+
+
+def _fmt_min(m):
+    if m is None:
+        return "Sin datos"
+    m = int(round(m))
+    d, resto = divmod(m, 1440)
+    h, mi = divmod(resto, 60)
+    if d:
+        return f"{d} d {h} h"
+    if h:
+        return f"{h} h {mi} min"
+    return f"{mi} min"
+
+
+@app.route("/estadisticas/exportar")
+@permiso_required("estadisticas.ver")
+def estadisticas_exportar():
+    """Descarga el informe de estadisticas (con los filtros aplicados) en PDF."""
+    from utilities.pdf_estadisticas import generar
+    try:
+        r = requests.get(BACKEND_URL + "/api/estadisticas", headers=_auth_headers(),
+                         params=_params_estadisticas(), timeout=20)
+    except requests.exceptions.ConnectionError:
+        flash("No se pudo conectar con el servidor", "error")
+        return redirect(url_for("estadisticas"))
+    if r.status_code != 200:
+        flash(r.json().get("error", "No se pudieron generar las estadisticas"), "error")
+        return redirect(url_for("estadisticas"))
+    d = r.json()
+    f = d["filtros"]
+    es_admin = session["usuario"]["rol"] == "administrador"
+
+    def _fecha(v):
+        try:
+            return datetime.strptime(v, "%Y-%m-%d").strftime("%d/%m/%Y")
+        except (TypeError, ValueError):
+            return v
+
+    if f["desde"] and f["hasta"]:
+        periodo = f"{_fecha(f['desde'])} al {_fecha(f['hasta'])}"
+    elif f["desde"]:
+        periodo = f"Desde el {_fecha(f['desde'])}"
+    elif f["hasta"]:
+        periodo = f"Hasta el {_fecha(f['hasta'])}"
+    else:
+        periodo = "Todo el historial"
+
+    municipio = "Toda la región"
+    if not es_admin:
+        municipio = session["usuario"].get("municipio") or "Mi municipio"
+    elif f["municipio_id"]:
+        municipio = str(f["municipio_id"])
+        try:
+            rm = requests.get(BACKEND_URL + "/api/municipios/activos", headers=_auth_headers(), timeout=6)
+            if rm.status_code == 200:
+                for m in rm.json().get("municipios", []):
+                    if str(m["id"]) == str(f["municipio_id"]):
+                        municipio = m["nombre"]
+        except requests.exceptions.ConnectionError:
+            pass
+
+    estado_txt = {"activas": "Activas", "resueltas": "Resueltas"}.get(f["estado"]) or ESTADO_LABELS.get(f["estado"], "Todos")
+    info = {
+        "generado": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        "es_admin": es_admin,
+        "alcance": ("Toda la región de la Sabana de Occidente" if es_admin else "Municipio de " + municipio),
+        "filtros": [("Periodo", periodo), ("Municipio", municipio),
+                    ("Tipo", filtro_tipo_bonito(f["tipo"]) if f["tipo"] else "Todos"),
+                    ("Prioridad", PRIORIDAD_LABELS.get(f["prioridad"], "Todas")), ("Estado", estado_txt)],
+    }
+    pdf = generar(d, info, _fmt_min, filtro_tipo_bonito,
+                  lambda c: PRIORIDAD_LABELS.get(c, c), lambda c: ESTADO_LABELS.get(c, c))
+    nombre = "siger-estadisticas-" + datetime.now().strftime("%Y%m%d-%H%M") + ".pdf"
+    return Response(pdf, mimetype="application/pdf",
+                    headers={"Content-Disposition": f"attachment; filename={nombre}", "Cache-Control": "no-store"})
+
+
+# ---------------- Notificaciones (HU-15) ----------------
+
+@app.route("/notificaciones")
+@login_required
+def notificaciones():
+    solo = request.args.get("filtro") == "no_leidas"
+    params = {"limite": 100}
+    if solo:
+        params["no_leidas"] = "1"
+    try:
+        r = requests.get(BACKEND_URL + "/api/notificaciones", headers=_auth_headers(), params=params, timeout=8)
+    except requests.exceptions.ConnectionError:
+        flash("No se pudo conectar con el servidor", "error")
+        return render_template("notificaciones.html", notificaciones=[], no_leidas=0, solo=solo)
+    if r.status_code != 200:
+        flash(r.json().get("error", "No se pudieron cargar las notificaciones"), "error")
+        return render_template("notificaciones.html", notificaciones=[], no_leidas=0, solo=solo)
+    d = r.json()
+    return render_template("notificaciones.html", notificaciones=d["notificaciones"],
+                            no_leidas=d["no_leidas"], solo=solo)
+
+
+@app.route("/notificaciones/resumen")
+@login_required
+def notificaciones_resumen():
+    """JSON para la campana del menu (se consulta cada 30 s)."""
+    try:
+        r = requests.get(BACKEND_URL + "/api/notificaciones", headers=_auth_headers(),
+                         params={"limite": 8}, timeout=6)
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "sin conexion"}), 503
+    if r.status_code != 200:
+        return jsonify({"error": "no disponible"}), (401 if r.status_code in (401, 422) else 502)
+    d = r.json()
+    for n in d["notificaciones"]:
+        n["url"] = url_for("notificacion_abrir", notificacion_id=n["id"])
+    respuesta = jsonify(d)
+    respuesta.headers["Cache-Control"] = "no-store"
+    return respuesta
+
+
+@app.route("/notificaciones/<int:notificacion_id>/abrir")
+@login_required
+def notificacion_abrir(notificacion_id):
+    """Marca la notificacion como leida y lleva al detalle de la emergencia."""
+    destino = url_for("notificaciones")
+    try:
+        r = requests.post(BACKEND_URL + f"/api/notificaciones/{notificacion_id}/leer", headers=_auth_headers(), timeout=6)
+        if r.status_code == 200:
+            reporte_id = r.json().get("notificacion", {}).get("reporte_id")
+            if reporte_id:
+                destino = url_for("reporte_detalle", reporte_id=reporte_id)
+    except requests.exceptions.ConnectionError:
+        pass
+    return redirect(destino)
+
+
+@app.route("/notificaciones/leer-todas", methods=["POST"])
+@login_required
+def notificaciones_leer_todas():
+    try:
+        requests.post(BACKEND_URL + "/api/notificaciones/leer-todas", headers=_auth_headers(), timeout=6)
+    except requests.exceptions.ConnectionError:
+        flash("No se pudo conectar con el servidor", "error")
+    if request.headers.get("X-Requested-With") == "fetch":
+        return jsonify({"ok": True})
+    return redirect(request.referrer or url_for("notificaciones"))
 
 
 @app.route("/logout")

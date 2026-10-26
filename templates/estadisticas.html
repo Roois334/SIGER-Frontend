@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Estadísticas — SIGER{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="dash-hero animate-in">
+    <div class="pg-crumbs"><a href="{{ url_for('dashboard') }}">Panel</a><span>/</span><span>Estadísticas</span></div>
+    <h1 class="dash-title">Estadísticas de emergencias</h1>
+    <p class="dash-sub">
+      {% if es_admin %}Distribución de los incidentes registrados en toda la Sabana de Occidente.
+      {% else %}Distribución de los incidentes registrados en {{ municipio_propio or 'tu municipio' }}.{% endif %}
+      Filtra por periodo, tipo, prioridad o estado y los indicadores se actualizan al instante.
+    </p>
+  </div>
+
+  <!-- ===== Filtros ===== -->
+  <section class="es-filtros animate-in" aria-label="Filtros">
+    <div class="es-chips" role="group" aria-label="Periodo rápido">
+      <button type="button" class="es-chip" data-rango="7">7 días</button>
+      <button type="button" class="es-chip" data-rango="30">30 días</button>
+      <button type="button" class="es-chip" data-rango="mes">Este mes</button>
+      <button type="button" class="es-chip" data-rango="anio">Este año</button>
+      <button type="button" class="es-chip" data-rango="todo">Todo</button>
+    </div>
+    <div class="es-campos">
+      <label class="es-campo"><span>Desde</span><input type="date" id="f-desde" class="rep-input" value="{{ filtros.desde }}"></label>
+      <label class="es-campo"><span>Hasta</span><input type="date" id="f-hasta" class="rep-input" value="{{ filtros.hasta }}"></label>
+      {% if es_admin %}
+      <label class="es-campo"><span>Municipio</span>
+        <select id="f-municipio_id" class="rep-input">
+          <option value="">Toda la región</option>
+          {% for m in municipios %}<option value="{{ m.id }}" {{ 'selected' if filtros.municipio_id == m.id|string }}>{{ m.nombre }}</option>{% endfor %}
+        </select>
+      </label>
+      {% endif %}
+      <label class="es-campo"><span>Tipo</span>
+        <select id="f-tipo" class="rep-input">
+          <option value="">Todos los tipos</option>
+          {% for t in tipos %}<option value="{{ t.valor }}" {{ 'selected' if filtros.tipo == t.valor }}>{{ t.texto }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="es-campo"><span>Prioridad</span>
+        <select id="f-prioridad" class="rep-input">
+          <option value="">Todas</option>
+          {% for k, v in prioridad_labels.items() %}<option value="{{ k }}" {{ 'selected' if filtros.prioridad == k }}>{{ v }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="es-campo"><span>Estado</span>
+        <select id="f-estado" class="rep-input">
+          <option value="">Todos</option>
+          <option value="activas" {{ 'selected' if filtros.estado == 'activas' }}>Activas</option>
+          <option value="resueltas" {{ 'selected' if filtros.estado == 'resueltas' }}>Resueltas</option>
+          {% for k, v in estado_labels.items() %}<option value="{{ k }}" {{ 'selected' if filtros.estado == k }}>{{ v }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="es-acciones">
+      <span class="es-estado" id="es-estado" role="status" aria-live="polite">Cargando…</span>
+      <button type="button" class="rep-btn-ghost" id="es-limpiar">Limpiar filtros</button>
+      <a href="#" class="btn-cta es-exportar" id="es-exportar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6M9 15l3 3 3-3"/></svg>
+        Descargar PDF
+      </a>
+    </div>
+  </section>
+
+  <div class="es-error" id="es-error" hidden></div>
+
+  <!-- ===== Indicadores ===== -->
+  <section class="es-kpis" id="es-kpis" aria-label="Indicadores"></section>
+
+  <!-- ===== Gráficos ===== -->
+  <section class="es-grid" id="es-grid">
+    <article class="es-card es-ancho">
+      <header><h2>Emergencias en el tiempo</h2><small id="es-serie-sub"></small></header>
+      <div class="es-chart" id="es-serie"></div>
+    </article>
+    <article class="es-card">
+      <header><h2>Por estado</h2><small>Clic en un estado para filtrar</small></header>
+      <div id="es-estados"></div>
+    </article>
+    <article class="es-card">
+      <header><h2>Por prioridad</h2><small>Clic para filtrar</small></header>
+      <div id="es-prioridades"></div>
+    </article>
+    <article class="es-card">
+      <header><h2>Por tipo de emergencia</h2><small>Porcentaje sobre el total</small></header>
+      <div id="es-tipos"></div>
+    </article>
+    <article class="es-card" id="es-card-municipios">
+      <header><h2>Por municipio</h2><small>Porcentaje sobre el total</small></header>
+      <div id="es-municipios"></div>
+    </article>
+    <article class="es-card es-ancho" id="es-card-organismos">
+      <header><h2>Organismos con más emergencias asignadas</h2><small>Excluye pendientes y descartadas</small></header>
+      <div id="es-organismos"></div>
+    </article>
+  </section>
+
+  <div class="es-vacio" id="es-vacio" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="36" height="36"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+    <b>No hay emergencias con estos filtros</b>
+    <span>Prueba ampliando el periodo o quitando algún filtro.</span>
+  </div>
+</div>
+
+<div class="es-tip" id="es-tip" role="tooltip" hidden></div>
+
+<script type="application/json" id="es-cfg">{{ {
+  "datos": url_for('estadisticas_datos'), "exportar": url_for('estadisticas_exportar'),
+  "prioridades": prioridad_labels, "estados": estado_labels,
+  "tipos": tipos, "esAdmin": es_admin, "filtros": filtros
+}|tojson }}</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/estadisticas.js') }}"></script>
+{% endblock %}

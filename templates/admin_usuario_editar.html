@@ -12,19 +12,19 @@
       <p class="lsub">{{ usuario.email }}</p>
     </div>
 
-    <form method="POST" action="{{ url_for('admin_usuario_editar', user_id=usuario.id) }}">
+    <form method="POST" action="{{ url_for('admin_usuario_editar', user_id=usuario.id) }}" data-vf>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="lrow2">
         <div class="lfg">
           <label class="lfl">Nombre</label>
           <div class="liw">
-            <input type="text" name="nombre" class="lfi" style="padding-left:13px" required value="{{ usuario.nombre }}">
+            <input type="text" name="nombre" class="lfi" style="padding-left:13px" required maxlength="80" data-val="nombre" value="{{ usuario.nombre }}">
           </div>
         </div>
         <div class="lfg">
           <label class="lfl">Apellido</label>
           <div class="liw">
-            <input type="text" name="apellido" class="lfi" style="padding-left:13px" required value="{{ usuario.apellido }}">
+            <input type="text" name="apellido" class="lfi" style="padding-left:13px" required maxlength="80" data-val="nombre" value="{{ usuario.apellido }}">
           </div>
         </div>
       </div>
@@ -32,7 +32,7 @@
       <div class="lfg">
         <label class="lfl">Correo</label>
         <div class="liw">
-          <input type="email" name="email" class="lfi" style="padding-left:13px" required value="{{ usuario.email }}">
+          <input type="email" name="email" class="lfi" style="padding-left:13px" required maxlength="120" data-val="email" value="{{ usuario.email }}">
         </div>
       </div>
 

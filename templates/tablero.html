@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Dashboard general — SIGER{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="dash-hero animate-in">
+    <div class="pg-crumbs"><a href="{{ url_for('dashboard') }}">Panel</a><span>/</span><span>Dashboard general</span></div>
+    <h1 class="dash-title">Dashboard general</h1>
+    <p class="dash-sub">Estado actual de las emergencias registradas en toda la Sabana de Occidente. Los datos se actualizan solos cada minuto.</p>
+  </div>
+
+  <section class="tb-barra animate-in" aria-label="Periodo y actualización">
+    <div class="es-chips" role="group" aria-label="Periodo">
+      <button type="button" class="es-chip" data-rango="7">7 días</button>
+      <button type="button" class="es-chip" data-rango="30">30 días</button>
+      <button type="button" class="es-chip" data-rango="mes">Este mes</button>
+      <button type="button" class="es-chip" data-rango="anio">Este año</button>
+      <button type="button" class="es-chip" data-rango="todo">Todo</button>
+    </div>
+    <div class="tb-der">
+      <span class="es-estado" id="es-estado" role="status" aria-live="polite">Cargando…</span>
+      <label class="tb-switch" title="Actualizar automáticamente cada minuto">
+        <input type="checkbox" id="tb-auto" checked><i></i><span>Auto</span>
+      </label>
+      <button type="button" class="rep-btn-ghost" id="tb-refrescar">Actualizar</button>
+      <a href="{{ url_for('estadisticas') }}" class="rep-btn-ghost" id="tb-detalle">Ver estadísticas</a>
+      <a href="{{ url_for('estadisticas_exportar') }}" class="btn-cta es-exportar" id="es-exportar">Descargar PDF</a>
+    </div>
+  </section>
+
+  <div class="es-error" id="es-error" hidden></div>
+
+  <section class="es-kpis tb-kpis" id="es-kpis" aria-label="Indicadores"></section>
+
+  <section class="es-grid" id="es-grid">
+    <article class="es-card es-ancho">
+      <header><h2>Frecuencia de emergencias</h2><small id="es-serie-sub"></small></header>
+      <div class="es-chart" id="es-serie"></div>
+    </article>
+    <article class="es-card">
+      <header><h2>Grado de prioridad</h2><small>Clic para ver el detalle</small></header>
+      <div id="es-prioridades"></div>
+    </article>
+    <article class="es-card">
+      <header><h2>Estado de las emergencias</h2><small>Clic para ver el detalle</small></header>
+      <div id="es-estados"></div>
+    </article>
+    <article class="es-card">
+      <header><h2>Municipios más afectados</h2><small>Top 8 por número de emergencias</small></header>
+      <div id="es-municipios"></div>
+    </article>
+    <article class="es-card">
+      <header><h2>Tipos más frecuentes</h2><small>Clic para ver el detalle</small></header>
+      <div id="es-tipos"></div>
+    </article>
+  </section>
+
+  <div class="es-vacio" id="es-vacio" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="36" height="36"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+    <b>No hay emergencias en este periodo</b>
+    <span>Prueba con otro periodo o con "Todo".</span>
+  </div>
+</div>
+
+<div class="es-tip" id="es-tip" role="tooltip" hidden></div>
+
+<script type="application/json" id="es-cfg">{{ {
+  "datos": url_for('estadisticas_datos'), "exportar": url_for('estadisticas_exportar'),
+  "detalle": url_for('estadisticas'), "prioridades": prioridad_labels, "estados": estado_labels
+}|tojson }}</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/tablero.js') }}"></script>
+{% endblock %}

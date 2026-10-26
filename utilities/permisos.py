@@ -33,6 +33,11 @@ PERMISOS = {
     # Iniciar atencion, marcar resuelto o devolver un reporte asignado
     "reportes.atender":       {ORGANISMO_ATENCION},
 
+    # --- Estadisticas (HU-17): el gestor ve su municipio; el administrador, todo ---
+    "estadisticas.ver":       {GESTOR_MUNICIPAL, ADMINISTRADOR},
+    # Dashboard general (HU-18): solo el administrador, con datos de toda la region
+    "dashboard.ver":          {ADMINISTRADOR},
+
     # --- Administracion ---
     "usuarios.administrar":   {ADMINISTRADOR},
     "catalogos.administrar":  {ADMINISTRADOR},
