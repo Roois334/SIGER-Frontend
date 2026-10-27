@@ -1,0 +1,39 @@
+# Publica el frontend en Azure (siger-frontend-2716) cada vez que se sube algo a main.
+# No usa contrasenas: Azure confia en GitHub (OIDC) a traves de la identidad
+# administrada "siger-github-deploy", que solo puede publicar en las apps de SIGER.
+name: Publicar en Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # tambien se puede lanzar a mano desde la pestana Actions
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: publicar-azure
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Empaquetar el codigo (solo lo que esta en Git)
+        run: git archive --format=zip -o app.zip HEAD
+
+      - name: Iniciar sesion en Azure
+        uses: azure/login@v2
+        with:
+          client-id: 4ebf8e83-69db-4d93-bc02-fdbc64a5d855
+          tenant-id: 07da67a0-1f43-4e8c-977f-5f88b6470ee6
+          subscription-id: ff79088f-574c-4a15-8f5f-160a43d372f3
+
+      - name: Publicar en Azure App Service
+        run: az webapp deploy -g siger-rg -n siger-frontend-2716 --src-path app.zip --type zip --timeout 900000
+
+      - name: Comprobar que responde
+        run: curl --fail --silent --show-error --retry 6 --retry-delay 20 --retry-all-errors --max-time 90 https://siger-frontend-2716.azurewebsites.net/
