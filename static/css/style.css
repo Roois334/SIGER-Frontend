@@ -1533,3 +1533,32 @@ button.es-barra.is-on { border-color:var(--va); background:rgba(33,150,243,.1); 
 .tb-kpis { grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); }
 @media (min-width:1100px) { .tb-kpis { grid-template-columns:repeat(4, minmax(0,1fr)); } }
 @media (max-width:640px) { .tb-barra { padding:14px; } .tb-der { width:100%; } .tb-der .es-estado { width:100%; } .tb-der .rep-btn-ghost, .tb-der .btn-cta { flex:1; text-align:center; justify-content:center; } }
+
+/* ===== Boton flotante de soporte por WhatsApp ===== */
+.wa-soporte {
+  position:fixed; right:24px; bottom:24px; z-index:1050;
+  display:inline-flex; align-items:center; gap:10px;
+  padding:12px 20px 12px 14px; border-radius:var(--radius-pill);
+  background:linear-gradient(135deg,#25D366,#128C7E); color:#fff;
+  font-family:'Plus Jakarta Sans', sans-serif; font-weight:700; font-size:.92rem;
+  box-shadow:0 10px 30px rgba(18,140,126,.45);
+  animation:wa-flotar 3s ease-in-out infinite;
+  transition:transform var(--transition), box-shadow var(--transition);
+}
+.wa-soporte:hover { color:#fff; transform:translateY(-3px) scale(1.04); box-shadow:0 14px 36px rgba(18,140,126,.6); animation:none; }
+.wa-soporte::before {
+  content:""; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+  background:#25D366; animation:wa-pulso 2.4s ease-out infinite;
+}
+@keyframes wa-flotar { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
+@keyframes wa-pulso { 0% { opacity:.55; transform:scale(1); } 100% { opacity:0; transform:scale(1.35); } }
+/* No tapa el visor de evidencias ni el aviso del mapa */
+body:has(.lightbox.is-open) .wa-soporte { display:none; }
+/* En celular solo se muestra el icono */
+@media (max-width:640px) {
+  .wa-soporte { right:16px; bottom:16px; padding:14px; }
+  .wa-soporte span { display:none; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .wa-soporte, .wa-soporte::before { animation:none; }
+}
