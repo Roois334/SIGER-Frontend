@@ -1,4 +1,5 @@
 import os
+import secrets
 import time
 from datetime import datetime
 from utilities.api import requests, SesionExpirada
@@ -11,6 +12,7 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:5000")
+SIN_CONEXION = "No se pudo conectar con el servidor. Intenta mas tarde"
 
 MUNICIPIOS_SABANA_OCCIDENTE = [
     "Facatativa", "Madrid", "Mosquera", "Funza", "Bojaca",
@@ -131,7 +133,7 @@ def login():
             r = requests.post(BACKEND_URL + "/api/auth/login",
                                json={"email": email, "password": password}, timeout=5)
         except requests.exceptions.ConnectionError:
-            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            flash(SIN_CONEXION, "error")
             return render_template("login.html")
 
         if r.status_code == 200:
@@ -158,7 +160,7 @@ def olvide_password():
         try:
             r = requests.post(BACKEND_URL + "/api/auth/olvide-password", json={"email": email}, timeout=10)
         except requests.exceptions.ConnectionError:
-            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            flash(SIN_CONEXION, "error")
             return render_template("olvide.html", estado="form", email=email)
         if r.status_code != 200:
             flash(r.json().get("error", "No se pudo enviar el correo"), "error")
@@ -188,7 +190,7 @@ def restablecer_password(token):
         try:
             r = requests.post(BACKEND_URL + "/api/auth/restablecer", json={"token": token, "nueva": nueva}, timeout=8)
         except requests.exceptions.ConnectionError:
-            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            flash(SIN_CONEXION, "error")
             return redirect(url_for("restablecer_password", token=token))
         if r.status_code == 200:
             session.pop("reset_email", None)
@@ -200,7 +202,7 @@ def restablecer_password(token):
     try:
         r = requests.get(BACKEND_URL + f"/api/auth/restablecer/{token}", timeout=8)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return render_template("restablecer.html", valido=False)
     if r.status_code != 200:
         return render_template("restablecer.html", valido=False)
@@ -242,7 +244,7 @@ def registro():
         try:
             r = requests.post(BACKEND_URL + "/api/auth/register", json=payload, timeout=5)
         except requests.exceptions.ConnectionError:
-            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            flash(SIN_CONEXION, "error")
             return render_template("registro.html", municipios=MUNICIPIOS_SABANA_OCCIDENTE,
                            tipos_documento=TIPOS_DOCUMENTO, v=request.form)
 
@@ -290,16 +292,13 @@ def _perfil_accion(metodo, ruta, payload, mensaje_ok, ancla):
     try:
         r = requests.request(metodo, BACKEND_URL + ruta, json=payload, headers=_auth_headers(), timeout=8)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return redirect(destino)
     if r.status_code == 200:
         session["usuario"] = r.json()["usuario"]
         flash(mensaje_ok, "success")
     else:
-        try:
-            flash(r.json().get("error", "No se pudo guardar el cambio"), "error")
-        except ValueError:
-            flash("No se pudo guardar el cambio", "error")
+        flash(r.json().get("error", "No se pudo guardar el cambio"), "error")
     return redirect(destino)
 
 
@@ -356,7 +355,7 @@ def perfil_foto():
             timeout=10,
         )
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return redirect(url_for("perfil"))
 
     if r.status_code == 200:
@@ -366,6 +365,7 @@ def perfil_foto():
         flash(r.json().get("error", "No se pudo actualizar la foto"), "error")
 
     return redirect(url_for("perfil"))
+
 
 @app.route("/admin/usuarios")
 @admin_required
@@ -380,7 +380,7 @@ def admin_usuarios():
     try:
         r = requests.get(BACKEND_URL + "/api/usuarios", headers=_auth_headers(), params=params, timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return render_template("admin_usuarios.html", usuarios=[], filtros=filtros, role_labels=ROLE_LABELS)
 
     if r.status_code != 200:
@@ -407,7 +407,7 @@ def admin_usuario_editar(user_id):
             r = requests.put(BACKEND_URL + f"/api/usuarios/{user_id}",
                               json=payload, headers=_auth_headers(), timeout=5)
         except requests.exceptions.ConnectionError:
-            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            flash(SIN_CONEXION, "error")
             return redirect(url_for("admin_usuario_editar", user_id=user_id))
 
         if r.status_code == 200:
@@ -421,7 +421,7 @@ def admin_usuario_editar(user_id):
     try:
         r = requests.get(BACKEND_URL + f"/api/usuarios/{user_id}", headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return redirect(url_for("admin_usuarios"))
 
     if r.status_code != 200:
@@ -449,7 +449,7 @@ def admin_usuario_estado(user_id):
         r = requests.patch(BACKEND_URL + f"/api/usuarios/{user_id}/estado",
                             json={"activo": nuevo_estado}, headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return redirect(url_for("admin_usuarios"))
 
     if r.status_code == 200:
@@ -458,6 +458,7 @@ def admin_usuario_estado(user_id):
         flash(r.json().get("error", "No se pudo cambiar el estado del usuario"), "error")
 
     return redirect(url_for("admin_usuarios"))
+
 
 # ---------------- Municipios ----------------
 
@@ -472,7 +473,7 @@ def admin_municipios():
         try:
             r = requests.post(BACKEND_URL + "/api/municipios", json=payload, headers=_auth_headers(), timeout=5)
         except requests.exceptions.ConnectionError:
-            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            flash(SIN_CONEXION, "error")
             return redirect(url_for("admin_municipios"))
 
         if r.status_code == 201:
@@ -490,7 +491,7 @@ def admin_municipios():
     try:
         r = requests.get(BACKEND_URL + "/api/municipios", headers=_auth_headers(), params=params, timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return render_template("admin_municipios.html", municipios=[], filtros=filtros)
 
     if r.status_code != 200:
@@ -513,7 +514,7 @@ def admin_municipio_editar(municipio_id):
             r = requests.put(BACKEND_URL + f"/api/municipios/{municipio_id}",
                               json=payload, headers=_auth_headers(), timeout=5)
         except requests.exceptions.ConnectionError:
-            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            flash(SIN_CONEXION, "error")
             return redirect(url_for("admin_municipio_editar", municipio_id=municipio_id))
 
         if r.status_code == 200:
@@ -526,7 +527,7 @@ def admin_municipio_editar(municipio_id):
     try:
         r = requests.get(BACKEND_URL + f"/api/municipios/{municipio_id}", headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return redirect(url_for("admin_municipios"))
 
     if r.status_code != 200:
@@ -545,7 +546,7 @@ def admin_municipio_estado(municipio_id):
         r = requests.patch(BACKEND_URL + f"/api/municipios/{municipio_id}/estado",
                             json={"activo": nuevo_estado}, headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return redirect(url_for("admin_municipios"))
 
     if r.status_code == 200:
@@ -571,7 +572,7 @@ def admin_organismos():
         try:
             r = requests.post(BACKEND_URL + "/api/organismos", json=payload, headers=_auth_headers(), timeout=5)
         except requests.exceptions.ConnectionError:
-            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            flash(SIN_CONEXION, "error")
             return redirect(url_for("admin_organismos"))
 
         if r.status_code == 201:
@@ -590,7 +591,7 @@ def admin_organismos():
         r_org = requests.get(BACKEND_URL + "/api/organismos", headers=_auth_headers(), params=params, timeout=5)
         r_mun = requests.get(BACKEND_URL + "/api/municipios", headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return render_template("admin_organismos.html", organismos=[], municipios=[], filtros=filtros)
 
     if r_org.status_code != 200:
@@ -620,7 +621,7 @@ def admin_organismo_editar(organismo_id):
                 r = requests.put(BACKEND_URL + f"/api/organismos/{organismo_id}/municipios",
                                   json={"municipios": ids_municipios}, headers=_auth_headers(), timeout=5)
         except requests.exceptions.ConnectionError:
-            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            flash(SIN_CONEXION, "error")
             return redirect(url_for("admin_organismo_editar", organismo_id=organismo_id))
 
         if r.status_code == 200:
@@ -634,7 +635,7 @@ def admin_organismo_editar(organismo_id):
         r_org = requests.get(BACKEND_URL + f"/api/organismos/{organismo_id}", headers=_auth_headers(), timeout=5)
         r_mun = requests.get(BACKEND_URL + "/api/municipios", headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return redirect(url_for("admin_organismos"))
 
     if r_org.status_code != 200:
@@ -656,7 +657,7 @@ def admin_organismo_estado(organismo_id):
         r = requests.patch(BACKEND_URL + f"/api/organismos/{organismo_id}/estado",
                             json={"activo": nuevo_estado}, headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return redirect(url_for("admin_organismos"))
 
     if r.status_code == 200:
@@ -665,6 +666,7 @@ def admin_organismo_estado(organismo_id):
         flash(r.json().get("error", "No se pudo cambiar el estado del organismo"), "error")
 
     return redirect(url_for("admin_organismos"))
+
 
 # ---------------- Reportes de emergencia ----------------
 
@@ -728,7 +730,7 @@ def reportar_emergencia():
         r_mun = requests.get(BACKEND_URL + "/api/municipios/activos", headers=_auth_headers(), timeout=5)
         municipios = r_mun.json().get("municipios", []) if r_mun.status_code == 200 else []
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         municipios = []
 
     # Municipio del usuario como sugerencia inicial
@@ -766,7 +768,7 @@ def reportar_emergencia():
                 timeout=30,
             )
         except requests.exceptions.ConnectionError:
-            flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+            flash(SIN_CONEXION, "error")
             return mostrar(form_data)
 
         if r.status_code == 201:
@@ -775,11 +777,7 @@ def reportar_emergencia():
             # NO se crea un reporte duplicado.
             return redirect(url_for("reporte_detalle", reporte_id=reporte["id"], nuevo=1))
 
-        try:
-            mensaje = r.json().get("error", "No se pudo registrar el reporte")
-        except ValueError:
-            mensaje = "No se pudo registrar el reporte"
-        flash(mensaje, "error")
+        flash(r.json().get("error", "No se pudo registrar el reporte"), "error")
         return mostrar(form_data)
 
     return mostrar(None)
@@ -791,7 +789,7 @@ def mis_reportes():
     try:
         r = requests.get(BACKEND_URL + "/api/reportes", headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return render_template("mis_reportes.html", reportes=[], prioridad_labels=PRIORIDAD_LABELS,
                                 estado_labels=ESTADO_LABELS)
 
@@ -815,7 +813,7 @@ def reporte_detalle(reporte_id):
     try:
         r = requests.get(BACKEND_URL + f"/api/reportes/{reporte_id}", headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return redirect(url_for(volver))
 
     if r.status_code != 200:
@@ -839,16 +837,13 @@ def _accion_reporte(reporte_id, metodo_url, payload, mensaje_ok):
         r = requests.post(BACKEND_URL + f"/api/reportes/{reporte_id}/{metodo_url}",
                           json=payload, headers=_auth_headers(), timeout=8)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return redirect(url_for("reporte_detalle", reporte_id=reporte_id))
 
     if r.status_code == 200:
         flash(mensaje_ok, "success")
     else:
-        try:
-            flash(r.json().get("error", "No se pudo completar la accion"), "error")
-        except ValueError:
-            flash("No se pudo completar la accion", "error")
+        flash(r.json().get("error", "No se pudo completar la accion"), "error")
     return redirect(url_for("reporte_detalle", reporte_id=reporte_id))
 
 
@@ -997,10 +992,7 @@ def mapa_datos():
     if r.status_code in (401, 422):
         return jsonify({"error": "Tu sesion expiro. Ingresa de nuevo"}), 401
     if r.status_code != 200:
-        try:
-            mensaje = r.json().get("error", "No se pudieron cargar las emergencias")
-        except ValueError:
-            mensaje = "No se pudieron cargar las emergencias"
+        mensaje = r.json().get("error", "No se pudieron cargar las emergencias")
         return jsonify({"error": mensaje}), (r.status_code if r.status_code in (400, 403) else 502)
 
     reportes = []
@@ -1061,7 +1053,7 @@ def gestion_emergencias():
         r_rep = requests.get(BACKEND_URL + "/api/reportes/gestion", headers=_auth_headers(), params=params, timeout=5)
         r_mun = requests.get(BACKEND_URL + "/api/municipios/activos", headers=_auth_headers(), timeout=5)
     except requests.exceptions.ConnectionError:
-        flash("No se pudo conectar con el servidor. Intenta mas tarde", "error")
+        flash(SIN_CONEXION, "error")
         return mostrar([], [])
 
     if r_rep.status_code != 200:
@@ -1360,12 +1352,11 @@ def logout():
 
 
 # ---------------------------------------------------------------- seguridad
-import secrets as _secrets
 
 
 def _csrf_token():
     if "_csrf" not in session:
-        session["_csrf"] = _secrets.token_hex(32)
+        session["_csrf"] = secrets.token_hex(32)
     return session["_csrf"]
 
 
@@ -1382,7 +1373,7 @@ def verificar_csrf():
         return None
     enviado = request.form.get("csrf_token") or request.headers.get("X-CSRFToken", "")
     esperado = session.get("_csrf", "")
-    if not esperado or not _secrets.compare_digest(enviado.encode(), esperado.encode()):
+    if not esperado or not secrets.compare_digest(enviado.encode(), esperado.encode()):
         flash("Tu formulario expiro por seguridad. Intenta de nuevo", "error")
         return redirect(url_for("index"))
     return None

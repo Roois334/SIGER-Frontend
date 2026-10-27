@@ -72,5 +72,4 @@ En PowerShell: `$env:BACKEND_URL = "http://127.0.0.1:5000"` antes de `python app
 ## Notas
 
 - Los textos de las pantallas están en español; los tipos de emergencia se guardan sin tildes y se muestran con ellas (filtro `tipo_bonito`).
-- `templates/reporte_confirmacion.html` es un resto de una versión anterior y no se usa.
 - No hay pruebas automáticas todavía; las pantallas se probaron manualmente por rol.
