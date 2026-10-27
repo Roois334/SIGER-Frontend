@@ -73,3 +73,21 @@ En PowerShell: `$env:BACKEND_URL = "http://127.0.0.1:5000"` antes de `python app
 
 - Los textos de las pantallas están en español; los tipos de emergencia se guardan sin tildes y se muestran con ellas (filtro `tipo_bonito`).
 - No hay pruebas automáticas todavía; las pantallas se probaron manualmente por rol.
+
+## Publicación en Azure
+
+La aplicación está publicada en Azure App Service (plan gratuito F1, grupo de recursos `siger-rg`):
+
+- Sitio: https://siger-frontend-2716.azurewebsites.net
+- API: https://siger-backend-2716.azurewebsites.net
+
+**Se publica sola**: cada vez que se sube algo a la rama `main`, GitHub Actions
+(`.github/workflows/publicar-azure.yml`) empaqueta el código y lo despliega en `siger-frontend-2716`.
+El avance se ve en la pestaña **Actions** del repositorio. También se puede lanzar a mano desde ahí
+("Run workflow").
+
+- Trabajen en `dev` y pasen los cambios a `main` (pull request) solo cuando estén probados.
+- No usa contraseñas: Azure confía en GitHub mediante la identidad administrada `siger-github-deploy`,
+  que solo tiene permiso para publicar en las aplicaciones de SIGER.
+- Las claves (base de datos, correo, `SECRET_KEY`) **no** están en el repositorio: se configuran en
+  Azure, en la aplicación → *Configuración → Variables de entorno*.
