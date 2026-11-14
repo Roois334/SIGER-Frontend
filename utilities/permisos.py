@@ -17,14 +17,14 @@ ADMINISTRADOR = "administrador"
 ROLES_CON_ALCANCE_MUNICIPAL = {GESTOR_MUNICIPAL, ORGANISMO_ATENCION}
 
 PERMISOS = {
-    # --- Ciudadano ---
+    # Ciudadano
     "reportes.crear":         {CIUDADANO},
     "reportes.ver_propios":   {CIUDADANO},
 
-    # --- Mapa de emergencias: lo ven todos los roles (cada uno con su alcance) ---
+    # Mapa de emergencias: lo ven todos los roles (cada uno con su alcance)
     "mapa.ver":               {CIUDADANO, GESTOR_MUNICIPAL, ORGANISMO_ATENCION, ADMINISTRADOR},
 
-    # --- Gestion de emergencias ---
+    # Gestion de emergencias
     # Consultar: el gestor ve todo su municipio; el organismo SOLO lo que le asignaron.
     "emergencias.consultar":  {GESTOR_MUNICIPAL, ORGANISMO_ATENCION, ADMINISTRADOR},
     # Aceptar un reporte, asignarlo a un organismo o descartarlo
@@ -32,12 +32,12 @@ PERMISOS = {
     # Iniciar atencion, marcar resuelto o devolver un reporte asignado
     "reportes.atender":       {ORGANISMO_ATENCION},
 
-    # --- Estadisticas (HU-17): el gestor ve su municipio; el administrador, todo ---
+    # Estadisticas (HU-17): el gestor ve su municipio; el administrador, todo
     "estadisticas.ver":       {GESTOR_MUNICIPAL, ADMINISTRADOR},
     # Dashboard general (HU-18): solo el administrador, con datos de toda la region
     "dashboard.ver":          {ADMINISTRADOR},
 
-    # --- Administracion ---
+    # Administracion
     "usuarios.administrar":   {ADMINISTRADOR},
     "catalogos.administrar":  {ADMINISTRADOR},
 }
