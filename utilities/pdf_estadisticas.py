@@ -64,7 +64,7 @@ def _etq(e, gran, largo=False):
     return f"{int(d[0])} {MESES[int(m) - 1]}"
 
 
-# ----------------------------------------------------------------- flowables
+# flowables
 class Titulo(Flowable):
     def __init__(self, texto, nota=""):
         super().__init__(); self.texto, self.nota = texto, nota
@@ -187,7 +187,7 @@ class Dona(Flowable):
             c.setFillColor(GRIS); c.setFont("Helvetica", 7.2); c.drawRightString(self.w, y, _pct(f["porcentaje"])); y -= 5.6 * mm
 
 
-# ----------------------------------------------------------------- pagina
+# pagina
 class _Numerado(rl_canvas.Canvas):
     def __init__(self, *a, **k):
         super().__init__(*a, **k); self._paginas = []
@@ -238,7 +238,7 @@ def _interna(c, doc, info):
     c.restoreState()
 
 
-# ----------------------------------------------------------------- informe
+# informe
 def generar(d, info, fmt_min, nombre_tipo, label_prio, label_estado):
     """d: respuesta de /api/estadisticas. info: dict con generado, alcance, periodo, filtros (lista de (etiqueta, valor))."""
     buf = io.BytesIO()

@@ -83,7 +83,7 @@ def archivo_demasiado_grande(e):
     return redirect(url_for("reportar_emergencia"))
 
 
-# ---------------- Sincronizacion del usuario con el backend ----------------
+# Sincronizacion del usuario con el backend
 # Si el administrador cambia el rol o desactiva una cuenta, la sesion del
 # frontend se actualiza sola (cada INTERVALO_SYNC_SEG segundos como maximo).
 RUTAS_SIN_SYNC = {"static", "index", "login", "registro", "logout"}
@@ -460,7 +460,7 @@ def admin_usuario_estado(user_id):
     return redirect(url_for("admin_usuarios"))
 
 
-# ---------------- Municipios ----------------
+# Municipios
 
 @app.route("/admin/municipios", methods=["GET", "POST"])
 @admin_required
@@ -557,7 +557,7 @@ def admin_municipio_estado(municipio_id):
     return redirect(url_for("admin_municipios"))
 
 
-# ---------------- Organismos ----------------
+# Organismos
 
 @app.route("/admin/organismos", methods=["GET", "POST"])
 @admin_required
@@ -668,7 +668,7 @@ def admin_organismo_estado(organismo_id):
     return redirect(url_for("admin_organismos"))
 
 
-# ---------------- Reportes de emergencia ----------------
+# Reportes de emergencia
 
 # Respaldo por si el backend no responde la configuracion (la fuente real es el backend)
 TIPOS_EMERGENCIA = [
@@ -1064,9 +1064,7 @@ def gestion_emergencias():
     return mostrar(r_rep.json().get("reportes", []), municipios)
 
 
-# ---------------------------------------------------------------------------
 # Informacion de los organismos de atencion (pagina informativa para todos)
-# ---------------------------------------------------------------------------
 TIPOS_FILTRO_ORGANISMOS = [
     ("incendio", "Incendio"),
     ("inundacion", "Inundación"),
@@ -1150,7 +1148,7 @@ def organismos_info():
                            tipos_filtro=TIPOS_FILTRO_ORGANISMOS)
 
 
-# ---------------- Estadisticas (HU-17) ----------------
+# Estadisticas (HU-17)
 
 FILTROS_ESTADISTICAS = ("desde", "hasta", "municipio_id", "tipo", "prioridad", "estado")
 
@@ -1275,7 +1273,7 @@ def estadisticas_exportar():
                     headers={"Content-Disposition": f"attachment; filename={nombre}", "Cache-Control": "no-store"})
 
 
-# ---------------- Notificaciones (HU-15) ----------------
+# Notificaciones (HU-15)
 
 @app.route("/notificaciones")
 @login_required
@@ -1351,7 +1349,7 @@ def logout():
     return redirect(url_for("login"))
 
 
-# ---------------------------------------------------------------- seguridad
+# seguridad
 
 
 def _csrf_token():
