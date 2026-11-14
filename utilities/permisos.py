@@ -11,7 +11,6 @@ GESTOR_MUNICIPAL = "gestor_municipal"
 ORGANISMO_ATENCION = "organismo_atencion"
 ADMINISTRADOR = "administrador"
 
-ROLES_VALIDOS = [CIUDADANO, GESTOR_MUNICIPAL, ORGANISMO_ATENCION, ADMINISTRADOR]
 
 # Roles cuyo alcance se limita al municipio que tienen asignado
 # (solo ven las emergencias de SU municipio).

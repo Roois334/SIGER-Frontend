@@ -33,7 +33,7 @@ class _Api:
     exceptions = _requests.exceptions
 
     def request(self, metodo, url, **kwargs):
-        # La base de datos remota (Filess) puede ser lenta: se espera al menos 15 segundos
+        # El backend puede tardar en responder: se espera al menos 15 segundos
         kwargs["timeout"] = max(kwargs.get("timeout") or 0, 15)
         try:
             r = _requests.request(metodo, url, **kwargs)
@@ -58,9 +58,6 @@ class _Api:
 
     def patch(self, url, **kwargs):
         return self.request("PATCH", url, **kwargs)
-
-    def delete(self, url, **kwargs):
-        return self.request("DELETE", url, **kwargs)
 
 
 requests = _Api()
