@@ -91,3 +91,13 @@ El avance se ve en la pestaña **Actions** del repositorio. También se puede la
   que solo tiene permiso para publicar en las aplicaciones de SIGER.
 - Las claves (base de datos, correo, `SECRET_KEY`) **no** están en el repositorio: se configuran en
   Azure, en la aplicación → *Configuración → Variables de entorno*.
+
+
+## Pruebas, seguridad y calidad
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+python -m pytest
+```
+
+Como viaja la contrasena (HTTPS en los dos tramos), el CI y SonarQube estan en [CALIDAD_Y_SEGURIDAD.md](CALIDAD_Y_SEGURIDAD.md).

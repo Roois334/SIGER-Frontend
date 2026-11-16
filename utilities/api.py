@@ -7,6 +7,8 @@ Cliente HTTP unico para hablar con el backend.
 """
 import requests as _requests
 
+from utilities.seguridad import conexion_segura
+
 
 class SesionExpirada(Exception):
     pass
@@ -33,6 +35,9 @@ class _Api:
     exceptions = _requests.exceptions
 
     def request(self, metodo, url, **kwargs):
+        # Nunca se manda nada (contrasenas, token) por HTTP a un servidor remoto
+        if not conexion_segura(url):
+            raise _requests.exceptions.ConnectionError("Conexion insegura: el backend debe usar HTTPS")
         # El backend puede tardar en responder: se espera al menos 15 segundos
         kwargs["timeout"] = max(kwargs.get("timeout") or 0, 15)
         try:

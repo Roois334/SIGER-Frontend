@@ -7,11 +7,15 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from config import Config
 from utilities.decorators import login_required, admin_required, permiso_required
 from utilities.permisos import puede, tiene_alcance_municipal
+from utilities.seguridad import aplicar_seguridad, url_backend_segura
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:5000")
+# El backend remoto SIEMPRE por HTTPS: por aqui viaja la contrasena del login (ver utilities/seguridad.py)
+BACKEND_URL = url_backend_segura(os.environ.get("BACKEND_URL", "http://127.0.0.1:5000"))
+# HTTPS obligatorio detras de Azure + HSTS + "no-store" en las pantallas donde se escribe la contrasena
+aplicar_seguridad(app, rutas_sensibles=("/login", "/registro", "/olvide-password", "/restablecer", "/perfil"))
 SIN_CONEXION = "No se pudo conectar con el servidor. Intenta mas tarde"
 
 MUNICIPIOS_SABANA_OCCIDENTE = [

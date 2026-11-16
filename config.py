@@ -1,7 +1,21 @@
 import os
 import secrets
 
+from utilities.seguridad import es_url_local
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _cookie_segura():
+    """
+    La cookie de sesion solo viaja por HTTPS. Se activa sola cuando el backend NO es local
+    (es decir, en un despliegue real); en tu computador sigue apagada para poder usar http://127.0.0.1.
+    SESSION_COOKIE_SECURE=1 / 0 en el entorno manda sobre esta regla.
+    """
+    valor = os.environ.get("SESSION_COOKIE_SECURE")
+    if valor is not None:
+        return valor == "1"
+    return not es_url_local(os.environ.get("BACKEND_URL", "http://127.0.0.1:5000"))
 
 
 def _clave_secreta():
@@ -39,7 +53,7 @@ class Config:
     # Cookie de sesion: no accesible desde JavaScript y no se envia desde otros sitios
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
-    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"  # ponlo en 1 con HTTPS
+    SESSION_COOKIE_SECURE = _cookie_segura()  # automatico: activa fuera de local (ver _cookie_segura)
 
     # 5 evidencias x 10 MB + margen del formulario (igual que el backend)
     MAX_CONTENT_LENGTH = 56 * 1024 * 1024
