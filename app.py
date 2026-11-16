@@ -9,7 +9,9 @@ from utilities.decorators import login_required, admin_required, permiso_require
 from utilities.permisos import puede, tiene_alcance_municipal
 from utilities.seguridad import aplicar_seguridad, url_backend_segura
 
-app = Flask(__name__)
+# La proteccion CSRF es propia (no Flask-WTF): todo POST/PUT/PATCH/DELETE debe traer el token
+# de la sesion; ver verificar_csrf() al final de este archivo.
+app = Flask(__name__)  # NOSONAR
 app.config.from_object(Config)
 
 # El backend remoto SIEMPRE por HTTPS: por aqui viaja la contrasena del login (ver utilities/seguridad.py)
