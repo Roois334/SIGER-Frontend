@@ -20,7 +20,6 @@
       });
     };
 
-    /* Las fechas se guardan en hora de Colombia (UTC-5, sin horario de verano) */
     function hace(iso) {
       var m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(iso || "");
       if (!m) return "";
@@ -77,7 +76,6 @@
           .then(function () { cargar(); });
       });
     }
-    // Al abrir la campana se refresca la lista
     raiz.querySelector("[data-menu-trigger]").addEventListener("click", function () { cargar(); });
 
     setInterval(function () { if (!document.hidden) cargar(); }, INTERVALO);

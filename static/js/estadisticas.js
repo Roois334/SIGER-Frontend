@@ -13,7 +13,6 @@
   var TIP = $("es-tip");
   var timer = null, ultimo = null, peticion = 0;
 
-  /* ---------------------------------------------------------- filtros */
   function leer() {
     var f = {};
     CAMPOS.forEach(function (c) { var el = $("f-" + c); if (el && el.value) f[c] = el.value; });
@@ -44,7 +43,6 @@
     return true;
   }
 
-  /* ---------------------------------------------------------- carga */
   function estado(t, cls) { var e = $("es-estado"); e.textContent = t; e.className = "es-estado " + (cls || ""); }
   function mostrarError(t) { var e = $("es-error"); e.hidden = !t; e.textContent = t || ""; }
 
@@ -78,7 +76,6 @@
       .then(function () { if (n === peticion) $("es-grid").classList.remove("is-loading"); });
   }
 
-  /* ---------------------------------------------------------- formato */
   function minutos(m) {
     if (m == null) return "Sin datos";
     m = Math.round(m);
@@ -88,7 +85,6 @@
     return mi + " min";
   }
 
-  /* ---------------------------------------------------------- indicadores */
   var ICONOS = {
     total: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
     activas: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
@@ -112,7 +108,6 @@
       kpi("is-ambar", "atencion", "Tiempo promedio de atención", minutos(k.tiempo_atencion_min), k.con_tiempo_atencion ? "Del reporte a la resolución · " + fmt(k.con_tiempo_atencion) + " casos" : "Aún no hay emergencias resueltas");
   }
 
-  /* ---------------------------------------------------------- barras */
   function barras(id, filas, opts) {
     opts = opts || {};
     var cont = $(id);
@@ -132,7 +127,6 @@
     }).join("") + "</ul>";
   }
 
-  /* ---------------------------------------------------------- donut */
   function donut(id, filas, nombreDe, colorDe, filtro) {
     var cont = $(id), total = filas.reduce(function (a, f) { return a + f.total; }, 0);
     if (!total) { cont.innerHTML = '<p class="es-nada">Sin datos para mostrar.</p>'; return; }
@@ -148,7 +142,6 @@
       '<text x="70" y="68" text-anchor="middle" class="es-d-num">' + fmt(total) + '</text><text x="70" y="84" text-anchor="middle" class="es-d-txt">emergencias</text></svg><ul>' + leyenda + "</ul></div>";
   }
 
-  /* ---------------------------------------------------------- serie (area) */
   var MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
   function etiqueta(e, gran, largo) {
     var p = e.split("-");
@@ -188,7 +181,6 @@
     });
   }
 
-  /* ---------------------------------------------------------- pintar todo */
   function pintar(d) {
     pintarKpis(d.kpis);
     var vacio = d.kpis.total === 0;
@@ -206,7 +198,6 @@
     if (hayOrg) barras("es-organismos", d.por_organismo, { color: function () { return "linear-gradient(90deg,#00ACC1,#4DD0E1)"; } });
   }
 
-  /* ---------------------------------------------------------- tooltips */
   document.addEventListener("mousemove", function (e) {
     var t = e.target.closest ? e.target.closest("[data-tip]") : null;
     if (!t) { TIP.hidden = true; return; }
@@ -216,7 +207,6 @@
     TIP.style.top = y + "px";
   });
 
-  /* ---------------------------------------------------------- eventos */
   function pedir(retardo) { clearTimeout(timer); timer = setTimeout(cargar, retardo || 0); }
   CAMPOS.forEach(function (c) { var el = $("f-" + c); if (el) el.addEventListener("change", function () { pedir(80); }); });
   document.querySelectorAll(".es-chip").forEach(function (b) {

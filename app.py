@@ -9,14 +9,10 @@ from utilities.decorators import login_required, admin_required, permiso_require
 from utilities.permisos import puede, tiene_alcance_municipal
 from utilities.seguridad import aplicar_seguridad, url_backend_segura
 
-# La proteccion CSRF es propia (no Flask-WTF): todo POST/PUT/PATCH/DELETE debe traer el token
-# de la sesion; ver verificar_csrf() al final de este archivo.
 app = Flask(__name__)  # NOSONAR
 app.config.from_object(Config)
 
-# El backend remoto SIEMPRE por HTTPS: por aqui viaja la contrasena del login (ver utilities/seguridad.py)
 BACKEND_URL = url_backend_segura(os.environ.get("BACKEND_URL", "http://127.0.0.1:5000"))
-# HTTPS obligatorio detras de Azure + HSTS + "no-store" en las pantallas donde se escribe la contrasena
 aplicar_seguridad(app, rutas_sensibles=("/login", "/registro", "/olvide-password", "/restablecer", "/perfil"))
 SIN_CONEXION = "No se pudo conectar con el servidor. Intenta mas tarde"
 
@@ -34,19 +30,16 @@ ROLE_LABELS = {
 
 
 def _auth_headers():
-    """Cabecera con el JWT guardado en sesion, para llamar al backend protegido."""
     return {"Authorization": "Bearer " + session.get("token", "")}
 
 
 @app.context_processor
 def inject_backend_url():
-    """Permite armar en las plantillas la URL completa de archivos servidos por el backend (ej. fotos de perfil)."""
     return {"backend_url": BACKEND_URL}
 
 
 @app.context_processor
 def inject_permisos():
-    """En las plantillas: {% if puede('reportes.crear') %} ... {% endif %}"""
     usuario = session.get("usuario")
     return {"puede": lambda permiso: puede(usuario, permiso)}
 
@@ -56,7 +49,6 @@ MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "
 
 @app.template_filter("fecha_hora")
 def filtro_fecha_hora(valor, con_hora=True):
-    """'2026-10-10T14:43:00' -> '10 oct 2026 · 2:43 p. m.'"""
     if not valor:
         return "—"
     try:
@@ -79,7 +71,6 @@ TIPOS_CON_TILDE = {
 
 @app.template_filter("tipo_bonito")
 def filtro_tipo_bonito(tipo):
-    """Los tipos se guardan sin tildes; aqui se muestran bien escritos."""
     return TIPOS_CON_TILDE.get(tipo, tipo)
 
 
@@ -89,9 +80,6 @@ def archivo_demasiado_grande(e):
     return redirect(url_for("reportar_emergencia"))
 
 
-# Sincronizacion del usuario con el backend
-# Si el administrador cambia el rol o desactiva una cuenta, la sesion del
-# frontend se actualiza sola (cada INTERVALO_SYNC_SEG segundos como maximo).
 RUTAS_SIN_SYNC = {"static", "index", "login", "registro", "logout"}
 INTERVALO_SYNC_SEG = 60
 
@@ -108,7 +96,7 @@ def sincronizar_usuario():
     except requests.exceptions.ConnectionError:
         return None
 
-    if r.status_code in (401, 422):  # cuenta desactivada, token vencido o invalido
+    if r.status_code in (401, 422):
         session.clear()
         flash("Tu sesion expiro o tu cuenta fue desactivada. Ingresa de nuevo", "error")
         return redirect(url_for("login"))
@@ -157,7 +145,6 @@ def login():
 
 @app.route("/olvide-password", methods=["GET", "POST"])
 def olvide_password():
-    """Paso 1: el usuario escribe su correo y el backend le envia el enlace (Gmail)."""
     if "usuario" in session:
         return redirect(url_for("perfil", _anchor="seguridad"))
 
@@ -187,7 +174,6 @@ def olvide_password():
 
 @app.route("/restablecer/<token>", methods=["GET", "POST"])
 def restablecer_password(token):
-    """Paso 2: el enlace del correo abre esta pantalla para crear la nueva contrasena."""
     if request.method == "POST":
         nueva = request.form.get("nueva", "")
         if nueva != request.form.get("confirmar", ""):
@@ -293,7 +279,6 @@ def perfil():
 
 
 def _perfil_accion(metodo, ruta, payload, mensaje_ok, ancla):
-    """Llama al backend para un cambio del perfil y vuelve a la misma seccion con un aviso."""
     destino = url_for("perfil", _anchor=ancla)
     try:
         r = requests.request(metodo, BACKEND_URL + ruta, json=payload, headers=_auth_headers(), timeout=8)
@@ -417,7 +402,7 @@ def admin_usuario_editar(user_id):
             return redirect(url_for("admin_usuario_editar", user_id=user_id))
 
         if r.status_code == 200:
-            session["sync_ts"] = 0  # por si el admin se edito a si mismo
+            session["sync_ts"] = 0
             flash("Usuario actualizado correctamente", "success")
             return redirect(url_for("admin_usuarios"))
 
@@ -465,8 +450,6 @@ def admin_usuario_estado(user_id):
 
     return redirect(url_for("admin_usuarios"))
 
-
-# Municipios
 
 @app.route("/admin/municipios", methods=["GET", "POST"])
 @admin_required
@@ -562,8 +545,6 @@ def admin_municipio_estado(municipio_id):
 
     return redirect(url_for("admin_municipios"))
 
-
-# Organismos
 
 @app.route("/admin/organismos", methods=["GET", "POST"])
 @admin_required
@@ -674,9 +655,6 @@ def admin_organismo_estado(organismo_id):
     return redirect(url_for("admin_organismos"))
 
 
-# Reportes de emergencia
-
-# Respaldo por si el backend no responde la configuracion (la fuente real es el backend)
 TIPOS_EMERGENCIA = [
     "Incendio",
     "Inundacion",
@@ -717,7 +695,6 @@ ESTADO_LABELS = {
 
 
 def _config_reporte():
-    """Tipos, prioridades y limites desde el backend (con respaldo local)."""
     try:
         r = requests.get(BACKEND_URL + "/api/reportes/configuracion", headers=_auth_headers(), timeout=5)
         if r.status_code == 200:
@@ -739,7 +716,6 @@ def reportar_emergencia():
         flash(SIN_CONEXION, "error")
         municipios = []
 
-    # Municipio del usuario como sugerencia inicial
     municipio_usuario = next(
         (str(m["id"]) for m in municipios if m["nombre"] == session["usuario"].get("municipio")), "")
 
@@ -779,8 +755,6 @@ def reportar_emergencia():
 
         if r.status_code == 201:
             reporte = r.json()["reporte"]
-            # Redirigir (patron POST/Redirect/GET): si el usuario recarga la pagina
-            # NO se crea un reporte duplicado.
             return redirect(url_for("reporte_detalle", reporte_id=reporte["id"], nuevo=1))
 
         flash(r.json().get("error", "No se pudo registrar el reporte"), "error")
@@ -811,10 +785,6 @@ def mis_reportes():
 @app.route("/reportes/<int:reporte_id>")
 @login_required
 def reporte_detalle(reporte_id):
-    """
-    Detalle de un reporte. Lo ven: su dueno, el administrador y los
-    gestores/organismos del mismo municipio (el backend decide).
-    """
     volver = "mis_reportes" if session["usuario"]["rol"] == "ciudadano" else "gestion_emergencias"
     try:
         r = requests.get(BACKEND_URL + f"/api/reportes/{reporte_id}", headers=_auth_headers(), timeout=5)
@@ -838,7 +808,6 @@ def reporte_detalle(reporte_id):
 
 
 def _accion_reporte(reporte_id, metodo_url, payload, mensaje_ok):
-    """Llama al backend (asignar / cambiar estado) y vuelve al detalle con un aviso."""
     try:
         r = requests.post(BACKEND_URL + f"/api/reportes/{reporte_id}/{metodo_url}",
                           json=payload, headers=_auth_headers(), timeout=8)
@@ -856,7 +825,6 @@ def _accion_reporte(reporte_id, metodo_url, payload, mensaje_ok):
 @app.route("/reportes/<int:reporte_id>/asignar", methods=["POST"])
 @permiso_required("reportes.asignar")
 def reporte_asignar(reporte_id):
-    """El gestor acepta el reporte y lo asigna (o reasigna) a un organismo."""
     payload = {
         "organismo_id": request.form.get("organismo_id", type=int),
         "prioridad": request.form.get("prioridad", "").strip(),
@@ -881,7 +849,6 @@ MENSAJES_ACCION = {
 @app.route("/reportes/<int:reporte_id>/estado", methods=["POST"])
 @login_required
 def reporte_estado(reporte_id):
-    """Acciones: iniciar / resolver / devolver (organismo) y descartar (gestor). El backend valida."""
     accion = request.form.get("accion", "")
     if accion not in MENSAJES_ACCION:
         flash("Accion no valida", "error")
@@ -893,7 +860,6 @@ def reporte_estado(reporte_id):
 @app.route("/reportes/<int:reporte_id>/apoyo", methods=["POST"])
 @login_required
 def reporte_apoyo(reporte_id):
-    """El gestor define los organismos de apoyo de la emergencia. El backend valida."""
     payload = {"organismo_ids": request.form.getlist("organismo_ids", type=int)}
     return _accion_reporte(reporte_id, "apoyo", payload,
                            "Organismos de apoyo actualizados. Quedó registrado en el historial")
@@ -902,7 +868,6 @@ def reporte_apoyo(reporte_id):
 @app.route("/reportes/<int:reporte_id>/tipo", methods=["POST"])
 @login_required
 def reporte_tipo(reporte_id):
-    """El gestor corrige el tipo de una emergencia abierta. El backend valida permisos y estado."""
     payload = {"tipo": request.form.get("tipo", "").strip(),
                "comentario": request.form.get("comentario", "").strip()}
     return _accion_reporte(reporte_id, "tipo", payload,
@@ -912,10 +877,6 @@ def reporte_tipo(reporte_id):
 @app.route("/evidencias/<int:evidencia_id>")
 @login_required
 def ver_evidencia(evidencia_id):
-    """
-    Actua como intermediario: el navegador nunca habla directo con el backend
-    (que exige un token Bearer), sino con esta ruta protegida por la sesion.
-    """
     try:
         r = requests.get(BACKEND_URL + f"/api/reportes/evidencias/{evidencia_id}",
                           headers=_auth_headers(), timeout=15)
@@ -937,10 +898,6 @@ def ver_evidencia(evidencia_id):
 
 @app.route("/mapa")
 def mapa_emergencias():
-    """
-    Mapa de emergencias. Los usuarios con sesion ven lo que les corresponde segun su rol;
-    un visitante (sin cuenta) ve el mapa PUBLICO: emergencias confirmadas, sin datos privados.
-    """
     municipios = MUNICIPIOS_SABANA_OCCIDENTE
     if "usuario" not in session:
         return render_template("mapa_emergencias.html", municipios=municipios, tipos=TIPOS_EMERGENCIA,
@@ -959,7 +916,6 @@ def mapa_emergencias():
 
 
 def _mapa_datos_publico():
-    """Visitante sin cuenta: solo los datos publicos que entrega el backend."""
     try:
         r = requests.get(BACKEND_URL + "/api/publico/mapa", timeout=8)
     except requests.exceptions.ConnectionError:
@@ -979,17 +935,11 @@ def _mapa_datos_publico():
 
 @app.route("/mapa/datos")
 def mapa_datos():
-    """
-    JSON liviano para el mapa (se consulta cada 30 s). El backend ya filtra por rol:
-    el gestor ve su municipio y el organismo solo lo que le asignaron.
-    Sin sesion se entregan solo los datos publicos.
-    """
     if "usuario" not in session:
         return _mapa_datos_publico()
     if not puede(session["usuario"], "mapa.ver"):
         return jsonify({"error": "No tienes permisos"}), 403
     try:
-        # El ciudadano ve sus propios reportes; los demas roles, los de su alcance
         ruta = "/api/reportes" if session["usuario"]["rol"] == "ciudadano" else "/api/reportes/gestion"
         r = requests.get(BACKEND_URL + ruta, headers=_auth_headers(), timeout=8)
     except requests.exceptions.ConnectionError:
@@ -1013,7 +963,6 @@ def mapa_datos():
             "descripcion": (x.get("descripcion") or "")[:160],
         })
     if session["usuario"]["rol"] == "ciudadano":
-        # Emergencias activas de otras personas: el backend ya las entrega recortadas (sin datos personales)
         try:
             rp = requests.get(BACKEND_URL + "/api/reportes/publico", headers=_auth_headers(), timeout=8)
             if rp.status_code == 200:
@@ -1026,7 +975,7 @@ def mapa_datos():
                         "organismo": None, "afectados": None, "descripcion": "",
                     })
         except requests.exceptions.RequestException:
-            pass  # si falla, el ciudadano igual ve sus propios reportes
+            pass
     respuesta = jsonify({"reportes": reportes})
     respuesta.headers["Cache-Control"] = "no-store"
     return respuesta
@@ -1070,7 +1019,6 @@ def gestion_emergencias():
     return mostrar(r_rep.json().get("reportes", []), municipios)
 
 
-# Informacion de los organismos de atencion (pagina informativa para todos)
 TIPOS_FILTRO_ORGANISMOS = [
     ("incendio", "Incendio"),
     ("inundacion", "Inundación"),
@@ -1154,8 +1102,6 @@ def organismos_info():
                            tipos_filtro=TIPOS_FILTRO_ORGANISMOS)
 
 
-# Estadisticas (HU-17)
-
 FILTROS_ESTADISTICAS = ("desde", "hasta", "municipio_id", "tipo", "prioridad", "estado")
 
 
@@ -1185,7 +1131,6 @@ def estadisticas():
 @app.route("/tablero")
 @permiso_required("dashboard.ver")
 def tablero():
-    """Dashboard general del administrador (HU-18). Usa los mismos datos que Estadisticas."""
     return render_template("tablero.html", prioridad_labels=PRIORIDAD_LABELS, estado_labels=ESTADO_LABELS)
 
 
@@ -1219,7 +1164,6 @@ def _fmt_min(m):
 @app.route("/estadisticas/exportar")
 @permiso_required("estadisticas.ver")
 def estadisticas_exportar():
-    """Descarga el informe de estadisticas (con los filtros aplicados) en PDF."""
     from utilities.pdf_estadisticas import generar
     try:
         r = requests.get(BACKEND_URL + "/api/estadisticas", headers=_auth_headers(),
@@ -1279,8 +1223,6 @@ def estadisticas_exportar():
                     headers={"Content-Disposition": f"attachment; filename={nombre}", "Cache-Control": "no-store"})
 
 
-# Notificaciones (HU-15)
-
 @app.route("/notificaciones")
 @login_required
 def notificaciones():
@@ -1304,7 +1246,6 @@ def notificaciones():
 @app.route("/notificaciones/resumen")
 @login_required
 def notificaciones_resumen():
-    """JSON para la campana del menu (se consulta cada 30 s)."""
     try:
         r = requests.get(BACKEND_URL + "/api/notificaciones", headers=_auth_headers(),
                          params={"limite": 8}, timeout=6)
@@ -1323,7 +1264,6 @@ def notificaciones_resumen():
 @app.route("/notificaciones/<int:notificacion_id>/abrir")
 @login_required
 def notificacion_abrir(notificacion_id):
-    """Marca la notificacion como leida y lleva al detalle de la emergencia."""
     destino = url_for("notificaciones")
     try:
         r = requests.post(BACKEND_URL + f"/api/notificaciones/{notificacion_id}/leer", headers=_auth_headers(), timeout=6)
@@ -1355,9 +1295,6 @@ def logout():
     return redirect(url_for("login"))
 
 
-# seguridad
-
-
 def _csrf_token():
     if "_csrf" not in session:
         session["_csrf"] = secrets.token_hex(32)
@@ -1366,13 +1303,11 @@ def _csrf_token():
 
 @app.context_processor
 def inject_csrf():
-    """En los formularios: <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">"""
     return {"csrf_token": _csrf_token}
 
 
 @app.before_request
 def verificar_csrf():
-    """Todo POST/PUT/PATCH/DELETE debe traer el token de la sesion (evita acciones forzadas desde otros sitios)."""
     if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
         return None
     enviado = request.form.get("csrf_token") or request.headers.get("X-CSRFToken", "")
@@ -1392,8 +1327,6 @@ def sesion_expirada(e):
 
 @app.after_request
 def no_guardar_en_cache(respuesta):
-    """Las paginas HTML no se guardan en el cache del navegador: al cerrar sesion,
-    el boton Atras no puede mostrar contenido privado."""
     if respuesta.mimetype == "text/html":
         respuesta.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         respuesta.headers["Pragma"] = "no-cache"

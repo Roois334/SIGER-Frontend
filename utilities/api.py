@@ -1,10 +1,3 @@
-"""
-Cliente HTTP unico para hablar con el backend.
-- Si el backend responde 401/422 a una llamada que llevaba token, la sesion expiro:
-  se lanza SesionExpirada y la app redirige al login (ver app.py).
-- Los timeouts y otros fallos de red se tratan como ConnectionError (mensaje amable).
-- response.json() nunca falla: si la respuesta no es JSON (ej. un 413 en HTML) devuelve {}.
-"""
 import requests as _requests
 
 from utilities.seguridad import conexion_segura
@@ -35,10 +28,8 @@ class _Api:
     exceptions = _requests.exceptions
 
     def request(self, metodo, url, **kwargs):
-        # Nunca se manda nada (contrasenas, token) por HTTP a un servidor remoto
         if not conexion_segura(url):
             raise _requests.exceptions.ConnectionError("Conexion insegura: el backend debe usar HTTPS")
-        # El backend puede tardar en responder: se espera al menos 15 segundos
         kwargs["timeout"] = max(kwargs.get("timeout") or 0, 15)
         try:
             r = _requests.request(metodo, url, **kwargs)

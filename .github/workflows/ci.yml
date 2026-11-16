@@ -1,6 +1,3 @@
-# Integracion continua del FRONTEND: compilacion, pruebas de seguridad del login/HTTPS y analisis de SonarQube.
-#  - Se ejecuta en cada Pull Request hacia main y en cada push a cualquier rama que no sea main.
-#  - Tambien lo llama publicar-azure.yml antes de desplegar: si algo falla aqui, NO se publica.
 name: CI
 
 on:
@@ -24,7 +21,6 @@ jobs:
     timeout-minutes: 15
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      # Sin SONAR_HOST_URL se usa SonarQube Cloud; con un servidor propio, define ese secreto
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}
     steps:
       - uses: actions/checkout@v4

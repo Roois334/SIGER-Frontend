@@ -40,7 +40,6 @@
     return mi + " min";
   }
 
-  /* ---------------------------------------------------------- indicadores */
   var ICONOS = {
     total: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
     activas: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
@@ -59,7 +58,6 @@
       kpi("is-rojo", "criticas", "Críticas activas", fmt(k.criticas_activas), "Requieren atención inmediata");
   }
 
-  /* ---------------------------------------------------------- barras */
   function barras(id, filas, opts) {
     opts = opts || {};
     var cont = $(id);
@@ -79,7 +77,6 @@
     }).join("") + "</ul>";
   }
 
-  /* ---------------------------------------------------------- donut */
   function donut(id, filas, nombreDe, colorDe, filtro) {
     var cont = $(id), total = filas.reduce(function (a, f) { return a + f.total; }, 0);
     if (!total) { cont.innerHTML = '<p class="es-nada">Sin datos para mostrar.</p>'; return; }
@@ -95,7 +92,6 @@
       '<text x="70" y="68" text-anchor="middle" class="es-d-num">' + fmt(total) + '</text><text x="70" y="84" text-anchor="middle" class="es-d-txt">emergencias</text></svg><ul>' + leyenda + "</ul></div>";
   }
 
-  /* ---------------------------------------------------------- serie (area) */
   var MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
   function etiqueta(e, gran, largo) {
     var p = e.split("-");
@@ -135,7 +131,6 @@
     });
   }
 
-  /* ---------------------------------------------------------- pintar */
   function pintar(d) {
     pintarKpis(d.kpis);
     var vacio = d.kpis.total === 0;
@@ -193,7 +188,6 @@
   });
   $("tb-refrescar").addEventListener("click", cargar);
   $("tb-auto").addEventListener("change", function () { try { localStorage.setItem("siger-tb-auto", this.checked ? "1" : "0"); } catch (e) {} programar(); });
-  // Clic en una porcion o barra: abre Estadisticas con ese filtro y el mismo periodo
   document.addEventListener("click", function (e) {
     var b = e.target.closest ? e.target.closest("[data-filtro]") : null;
     if (!b) return;

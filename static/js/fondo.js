@@ -1,5 +1,3 @@
-/* Fondo animado: particulas luminosas que caen suavemente sobre el logo difuminado.
-   Se pausa si la pestana esta oculta y se apaga si el usuario pidio menos movimiento. */
 (function () {
   "use strict";
   var cv = document.getElementById("bg-particulas");
@@ -16,12 +14,12 @@
     return {
       x: Math.random() * W,
       y: arriba ? -10 - Math.random() * 40 : Math.random() * H,
-      r: 0.8 + r * r * 2.6,                 // la mayoria pequenas, pocas grandes
-      v: 14 + Math.random() * 30 + r * 16,  // velocidad de caida (px/s)
-      a: 0.25 + Math.random() * 0.55,       // brillo
-      s: Math.random() * Math.PI * 2,       // fase del vaiven
-      w: 6 + Math.random() * 16,            // amplitud del vaiven
-      c: Math.random() < 0.72 ? 0 : 1       // 0 azul, 1 cian
+      r: 0.8 + r * r * 2.6,
+      v: 14 + Math.random() * 30 + r * 16,
+      a: 0.25 + Math.random() * 0.55,
+      s: Math.random() * Math.PI * 2,
+      w: 6 + Math.random() * 16,
+      c: Math.random() < 0.72 ? 0 : 1
     };
   }
 

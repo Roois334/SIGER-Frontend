@@ -1,15 +1,3 @@
-/* SIGER - validaciones de formularios (lado del navegador).
-   El backend vuelve a validar todo: esto solo da una respuesta inmediata al usuario.
-
-   Atributos que se usan en los formularios:
-     <form data-vf>                      activa la revision al enviar
-     data-val="nombre|documento|telefono|email"   limpia lo que se escribe y valida el campo
-     data-tipo="#id"                     (documento) select con el tipo de documento
-     data-opcional                       el campo puede ir vacio
-     data-pw-check                       contrasena nueva: muestra los requisitos
-     data-pw-confirm="#id"               confirmacion: debe ser igual a la contrasena de #id
-     data-eye (boton)                    mostrar / ocultar contrasena
-*/
 (function () {
   "use strict";
 
@@ -17,7 +5,6 @@
   var OJO = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
   var OJO_X = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
 
-  /* ---------- reglas de contrasena (iguales a las del backend) ---------- */
   var REGLAS = [
     { id: "len", txt: "Mínimo 8 caracteres", ok: function (p) { return p.length >= 8 && p.length <= 128; } },
     { id: "may", txt: "Una letra mayúscula", ok: function (p) { return /[A-ZÁÉÍÓÚÜÑ]/.test(p); } },
@@ -28,7 +15,6 @@
   ];
   function passwordValida(p) { return REGLAS.every(function (r) { return r.ok(p); }); }
 
-  /* ---------- reglas de campos ---------- */
   var CAMPOS = {
     nombre: {
       limpiar: function (v) { return v.replace(new RegExp("[^" + LET + " '\\-]", "g"), "").replace(/\s{2,}/g, " ").replace(/^[\s'\-]+/, ""); },
@@ -73,7 +59,6 @@
     }
   };
 
-  /* ---------- mensajes bajo cada campo ---------- */
   function contenedor(input) { return input.closest(".liw, .pf-pw") || input; }
   function mensaje(input) {
     if (input._vfMsg) return input._vfMsg;
@@ -109,7 +94,7 @@
     input.addEventListener("input", function () {
       var limpio = def.limpiar(input.value, input);
       if (limpio !== input.value) input.value = limpio;
-      if (input.getAttribute("data-val") === "nombre") { /* permite espacios finales mientras se escribe */ }
+      if (input.getAttribute("data-val") === "nombre") {  }
       revisarCampo(input, tocado || input.value.length > 0);
     });
     input.addEventListener("blur", function () {
@@ -124,7 +109,6 @@
     });
   }
 
-  /* ---------- contrasena: lista de requisitos ---------- */
   function iniciarPassword(input) {
     var ul = document.createElement("ul");
     ul.className = "vf-rules"; ul.setAttribute("aria-label", "Requisitos de la contraseña");
@@ -152,7 +136,6 @@
     input.addEventListener("input", revisar); base.addEventListener("input", revisar);
   }
 
-  /* ---------- ojito ---------- */
   function iniciarOjo(btn) {
     btn.addEventListener("click", function () {
       var i = btn.parentElement.querySelector("input"); if (!i) return;
@@ -164,7 +147,6 @@
     });
   }
 
-  /* ---------- envio ---------- */
   function iniciarFormulario(form) {
     form.setAttribute("novalidate", "novalidate");
     form.addEventListener("submit", function (e) {

@@ -1,4 +1,3 @@
-# Lo que no hace falta en el paquete que se publica en Azure
 tests export-ignore
 .github export-ignore
 sonar-project.properties export-ignore

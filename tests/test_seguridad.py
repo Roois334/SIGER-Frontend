@@ -1,4 +1,3 @@
-"""La contrasena del login viaja cifrada en los dos tramos: navegador->frontend y frontend->backend."""
 import importlib
 import re
 

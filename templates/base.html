@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
 <script>
-  /* Aplica el tema guardado ANTES de pintar la página, para evitar parpadeo */
   (function () {
     var t = localStorage.getItem("siger-theme") || "dark";
     document.documentElement.setAttribute("data-theme", t);
@@ -168,7 +167,6 @@
   </footer>
 </div>
 
-{# Boton flotante de soporte por WhatsApp (visible en todas las paginas) #}
 <a class="wa-soporte" href="https://wa.me/573025554151?text=Hola%2C%20necesito%20soporte%20con%20SIGER"
    target="_blank" rel="noopener" aria-label="Soporte SIGER por WhatsApp">
   <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
@@ -192,7 +190,6 @@
   }, 5000);
 </script>
 <script>
-  // Si el navegador restaura la pagina desde su memoria (boton Atras), se vuelve a pedir al servidor
   window.addEventListener('pageshow', function (e) { if (e.persisted) { location.reload(); } });
 </script>
 {% block extra_scripts %}{% endblock %}
