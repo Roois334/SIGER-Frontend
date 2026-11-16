@@ -64,7 +64,7 @@ def aplicar_seguridad(app, rutas_sensibles=()):
     def cabeceras_seguridad(resp):
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("X-Frame-Options", "DENY")
-        resp.headers.setdefault("Referrer-Policy", "same-origin")
+        resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         if protocolo_cliente(request) == "https":
             resp.headers.setdefault("Strict-Transport-Security", HSTS)
         if sensibles and request.path.startswith(sensibles):
