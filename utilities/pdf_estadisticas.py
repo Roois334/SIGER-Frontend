@@ -1,4 +1,3 @@
-"""Informe PDF de estadisticas de SIGER (HU-17), generado con reportlab."""
 import io
 import math
 import os
@@ -64,7 +63,6 @@ def _etq(e, gran, largo=False):
     return f"{int(d[0])} {MESES[int(m) - 1]}"
 
 
-# flowables
 class Titulo(Flowable):
     def __init__(self, texto, nota=""):
         super().__init__(); self.texto, self.nota = texto, nota
@@ -79,7 +77,6 @@ class Titulo(Flowable):
 
 
 class Kpis(Flowable):
-    """Tarjetas de indicadores en cuadricula de 3 columnas."""
     def __init__(self, items):
         super().__init__(); self.items = items
     def wrap(self, w, h):
@@ -187,7 +184,6 @@ class Dona(Flowable):
             c.setFillColor(GRIS); c.setFont("Helvetica", 7.2); c.drawRightString(self.w, y, _pct(f["porcentaje"])); y -= 5.6 * mm
 
 
-# pagina
 class _Numerado(rl_canvas.Canvas):
     def __init__(self, *a, **k):
         super().__init__(*a, **k); self._paginas = []
@@ -238,9 +234,7 @@ def _interna(c, doc, info):
     c.restoreState()
 
 
-# informe
 def generar(d, info, fmt_min, nombre_tipo, label_prio, label_estado):
-    """d: respuesta de /api/estadisticas. info: dict con generado, alcance, periodo, filtros (lista de (etiqueta, valor))."""
     buf = io.BytesIO()
     doc = BaseDocTemplate(buf, pagesize=A4, leftMargin=MARGEN, rightMargin=MARGEN, topMargin=20 * mm, bottomMargin=19 * mm,
                           title="SIGER - Estadísticas de emergencias", author="SIGER", subject="Informe de estadísticas")
@@ -257,7 +251,6 @@ def generar(d, info, fmt_min, nombre_tipo, label_prio, label_estado):
 
     S = [Paragraph("Estadísticas de emergencias", h1), Spacer(1, 1.5 * mm),
          Paragraph(info["alcance"] + ". Los datos corresponden a los incidentes registrados en el sistema.", sub), Spacer(1, 4.5 * mm)]
-    # filtros aplicados
     filtros = info["filtros"]
     cols = len(filtros); cw = UTIL / cols
     t = Table([[Paragraph(e.upper(), cab) for e, _ in filtros], [Paragraph(str(v), cel) for _, v in filtros]], colWidths=[cw] * cols)

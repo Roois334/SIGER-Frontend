@@ -1,10 +1,5 @@
-/* =====================================================
-   SIGER — Sistema de Gestión de Emergencias Regional
-   Sabana de Occidente | Plus Jakarta Sans + Inter
-   ===================================================== */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* ===== VARIABLES — TEMA OSCURO (por defecto) ===== */
 :root,
 html[data-theme="dark"] {
   --v1:#0D47A1; --v2:#1565C0; --v3:#1E88E5; --v4:#E3F2FD;
@@ -26,7 +21,6 @@ html[data-theme="dark"] {
   color-scheme: dark;
 }
 
-/* ===== VARIABLES — TEMA CLARO ===== */
 html[data-theme="light"] {
   --v1:#0D47A1; --v2:#1565C0; --v3:#1E88E5; --v4:#0D47A1;
   --va:#1565C0; --vn:#1E88E5; --vg:#1976D2;
@@ -62,11 +56,9 @@ body {
 }
 
 a { text-decoration:none; color:inherit; transition:color var(--transition); }
-/* Ancho maximo de todas las paginas: cambia SOLO este valor para ensanchar/estrechar */
 :root { --ancho-max: 1680px; --gutter: 48px; }
 .container { width:min(var(--ancho-max), calc(100% - var(--gutter))); margin:0 auto; }
 
-/* ===== FONDO ===== */
 .bg-siger {
   position:fixed; inset:0; z-index:0; pointer-events:none;
   background: var(--n1);
@@ -88,7 +80,6 @@ html[data-theme="light"] .bg-siger::after {
 }
 .page-wrap { position:relative; z-index:1; display:flex; flex-direction:column; min-height:100vh; }
 
-/* ===== NAVBAR ===== */
 .navbar {
   position:sticky; top:0; z-index:1000;
   background:var(--nav-bg); backdrop-filter:blur(14px);
@@ -119,7 +110,6 @@ html[data-theme="light"] .bg-siger::after {
   font-size:.85rem; font-weight:700; box-shadow:0 4px 14px rgba(33,150,243,.3);
 }
 
-/* ===== MENÚ DESPLEGABLE (secciones del panel) ===== */
 .nav-menu { position:relative; }
 .nav-menu-btn {
   display:flex; align-items:center; gap:8px; font-size:.86rem; font-weight:600;
@@ -148,7 +138,6 @@ html[data-theme="light"] .bg-siger::after {
 .nav-menu-item-danger:hover { background:rgba(239,83,80,.1); color:var(--ra); }
 .nav-menu-sep { height:1px; background:var(--borde2); margin:6px 4px; }
 
-/* ===== BURBUJA DE PERFIL ===== */
 .user-menu { position:relative; }
 .user-bubble {
   width:36px; height:36px; border-radius:50%; border:none; cursor:pointer;
@@ -176,7 +165,6 @@ html[data-theme="light"] .bg-siger::after {
 
 .user-bubble-xl { width:76px; height:76px; font-size:1.5rem; box-shadow:0 8px 24px rgba(33,150,243,.35); }
 
-/* ===== PERFIL ===== */
 .profile-hero { display:flex; align-items:center; gap:22px; padding:40px 0 8px; }
 .profile-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); gap:16px; padding:24px 0 48px; }
 .profile-grid .dash-card h3 { margin-bottom:4px; }
@@ -193,7 +181,6 @@ html[data-theme="light"] .bg-siger::after {
 .user-menu-head-text strong { font-size:.88rem; color:var(--bl); font-family:'Plus Jakarta Sans',sans-serif; }
 .user-menu-head-text span { font-size:.74rem; color:var(--gs); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-/* Selector de tema */
 .theme-toggle {
   display:flex; align-items:center; gap:2px; background:var(--n4);
   border:1px solid var(--borde2); border-radius:var(--radius-pill); padding:3px; margin-left:4px;
@@ -207,7 +194,6 @@ html[data-theme="light"] .bg-siger::after {
 .theme-btn.active { background:var(--grn); color:#fff; }
 .theme-btn:not(.active):hover { color:var(--bl); background:var(--borde2); }
 
-/* ===== LOGIN / REGISTRO ===== */
 .lw { min-height:calc(100vh - 64px); display:flex; align-items:center; justify-content:center; padding:24px 16px; }
 .lc {
   background:var(--card-bg); border:1px solid var(--borde); border-radius:20px;
@@ -261,7 +247,6 @@ html[data-theme="light"] .bg-siger::after {
 .lalink { color:var(--va); font-weight:600; }
 .lrow2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 
-/* Acceso rápido demo */
 .qa-box { margin-bottom:18px; border:1px solid var(--borde); border-radius:13px; overflow:hidden; background:var(--n4); }
 .qa-tabs { display:flex; overflow-x:auto; scrollbar-width:none; border-bottom:1px solid var(--borde2); }
 .qa-tabs::-webkit-scrollbar { display:none; }
@@ -290,7 +275,6 @@ html[data-theme="light"] .bg-siger::after {
 .qa-arr { color:var(--va); opacity:.6; flex-shrink:0; font-size:.8rem; }
 .qa-hint { text-align:center; font-size:.64rem; color:var(--gs); padding:0 10px 8px; border-top:1px solid var(--borde2); margin-top:4px; }
 
-/* ===== FLASH ===== */
 .flash-wrap { width:min(var(--ancho-max), calc(100% - var(--gutter))); margin:16px auto 0; display:flex; flex-direction:column; gap:8px; }
 .flash {
   display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px;
@@ -302,7 +286,6 @@ html[data-theme="light"] .bg-siger::after {
 .flash-close { background:none; border:none; color:inherit; font-size:1.1rem; cursor:pointer; line-height:1; opacity:.7; }
 .flash-close:hover { opacity:1; }
 
-/* ===== DASHBOARD BÁSICO ===== */
 .main-content { flex:1; }
 .dash-hero { padding:40px 0 8px; }
 .dash-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:1.7rem; font-weight:900; color:var(--bl); letter-spacing:-.02em; }
@@ -330,7 +313,6 @@ html[data-theme="light"] .bg-siger::after {
   background:rgba(255,179,0,.12); border:1px solid rgba(255,179,0,.3); padding:3px 9px; border-radius:var(--radius-pill);
 }
 
-/* ===== ADMINISTRACION DE USUARIOS (PB-03) ===== */
 .dash-card-link { display:block; text-decoration:none; cursor:pointer; }
 .dash-card-tag-live {
   color:var(--ok); background:rgba(0,200,83,.12); border:1px solid rgba(0,200,83,.3);
@@ -401,12 +383,10 @@ html[data-theme="light"] .bg-siger::after {
   .adm-field { min-width:0; }
 }
 
-/* ===== FOOTER ===== */
 .footer { border-top:1px solid var(--borde2); padding:28px 0; margin-top:auto; }
 .footer-inner { width:min(var(--ancho-max), calc(100% - var(--gutter))); margin:0 auto; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
 .footer p { font-size:.78rem; color:var(--gs); }
 
-/* ===== RESPONSIVE ===== */
 @media (max-width: 720px) {
   .nav-links .nav-link { display:none; }
   .nav-menu-btn span { display:none; }
@@ -420,9 +400,6 @@ html[data-theme="light"] .bg-siger::after {
 
 .animate-in { animation:fadeUp .45s cubic-bezier(.4,0,.2,1) both; }
 @keyframes fadeUp { from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);} }
-/* =====================================================
-   LANDING — página de bienvenida (antes de iniciar sesión)
-   ===================================================== */
 .lh-hero {
   display:grid; grid-template-columns:1.1fr .9fr; gap:56px; align-items:center;
   padding:64px 0 56px;
@@ -453,7 +430,6 @@ html[data-theme="light"] .bg-siger::after {
 .lh-stat-num { font-family:'Plus Jakarta Sans',sans-serif; font-weight:900; font-size:1.6rem; color:var(--bl); letter-spacing:-.02em; }
 .lh-stat-label { font-size:.76rem; color:var(--gs); margin-top:2px; max-width:130px; line-height:1.4; }
 
-/* Visual: radar de cobertura */
 .lh-radar { position:relative; width:100%; aspect-ratio:1/1; max-width:400px; margin:0 auto; }
 .lh-radar-ring {
   position:absolute; inset:0; margin:auto; border-radius:50%; border:1px solid var(--borde);
@@ -489,13 +465,11 @@ html[data-theme="light"] .bg-siger::after {
   .lh-radar-pulse { animation:none; opacity:.25; }
 }
 
-/* Secciones generales */
 .lh-section { padding:48px 0; border-top:1px solid var(--borde2); }
 .lh-section-head { max-width:560px; margin-bottom:36px; }
 .lh-section-title { font-family:'Plus Jakarta Sans',sans-serif; font-weight:900; font-size:1.6rem; color:var(--bl); letter-spacing:-.02em; }
 .lh-section-sub { color:var(--gs); font-size:.94rem; margin-top:8px; line-height:1.6; }
 
-/* Qué es SIGER: texto + lista con borde de acento */
 .lh-about { display:grid; grid-template-columns:.85fr 1.15fr; gap:48px; align-items:start; }
 .lh-about-text { color:var(--gs); font-size:.96rem; line-height:1.75; }
 .lh-capabilities { display:flex; flex-direction:column; gap:2px; }
@@ -511,7 +485,6 @@ html[data-theme="light"] .bg-siger::after {
 .lh-cap-body h4 { font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:.94rem; color:var(--bl); margin-bottom:3px; }
 .lh-cap-body p { font-size:.85rem; color:var(--gs); line-height:1.55; }
 
-/* Cómo funciona: timeline horizontal */
 .lh-steps { display:grid; grid-template-columns:repeat(4, 1fr); gap:0; position:relative; }
 .lh-step { position:relative; padding:0 18px 0 0; }
 .lh-step::before {
@@ -526,7 +499,6 @@ html[data-theme="light"] .bg-siger::after {
 .lh-step h4 { font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:.92rem; color:var(--bl); margin-bottom:6px; }
 .lh-step p { font-size:.83rem; color:var(--gs); line-height:1.55; }
 
-/* Cobertura: chips de municipios */
 .lh-coverage-chips { display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
 .lh-chip {
   padding:9px 16px; border-radius:var(--radius-pill); background:var(--card-bg); border:1px solid var(--borde);
@@ -534,7 +506,6 @@ html[data-theme="light"] .bg-siger::after {
 }
 .lh-chip-dot { width:6px; height:6px; border-radius:50%; background:var(--va); }
 
-/* Roles: fila dividida por hairlines */
 .lh-roles { display:grid; grid-template-columns:repeat(3, 1fr); }
 .lh-role { padding:6px 28px; border-left:1px solid var(--borde2); }
 .lh-role:first-child { border-left:none; padding-left:0; }
@@ -546,7 +517,6 @@ html[data-theme="light"] .bg-siger::after {
 .lh-role h4 { font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1rem; color:var(--bl); margin-bottom:8px; }
 .lh-role p { font-size:.85rem; color:var(--gs); line-height:1.6; }
 
-/* CTA final */
 .lh-cta {
   background:var(--gr); border-radius:24px; padding:52px 44px; margin:56px 0 40px;
   display:flex; align-items:center; justify-content:space-between; gap:32px; flex-wrap:wrap;
@@ -575,10 +545,6 @@ html[data-theme="light"] .bg-siger::after {
   :root { --gutter: 24px; }
 }
 
-
-/* =====================================================
-   HU-04 · REPORTE DE EMERGENCIAS (formulario, detalle, listado)
-   ===================================================== */
 :root, html[data-theme="dark"] {
   --p-critica:#FF5252; --p-alta:#FF9800; --p-media:#42A5F5; --p-baja:#00C853;
 }
@@ -586,7 +552,6 @@ html[data-theme="light"] {
   --p-critica:#D32F2F; --p-alta:#E65100; --p-media:#1565C0; --p-baja:#2E7D32;
 }
 
-/* ---- chips de prioridad / estado ---- */
 .pill {
   display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:var(--radius-pill);
   font-size:.72rem; font-weight:700; border:1px solid transparent; white-space:nowrap; line-height:1.2;
@@ -599,12 +564,10 @@ html[data-theme="light"] {
 .pill-estado  { color:var(--am); background:rgba(255,179,0,.12); border-color:rgba(255,179,0,.3); }
 .pill-estado-ok { color:var(--ok); background:rgba(0,200,83,.12); border-color:rgba(0,200,83,.3); }
 
-/* ---- encabezado de pagina con migas ---- */
 .pg-crumbs { display:flex; align-items:center; gap:8px; font-size:.78rem; color:var(--gs); margin-bottom:10px; }
 .pg-crumbs a { color:var(--va); font-weight:600; }
 .pg-crumbs a:hover { text-decoration:underline; }
 
-/* ---- progreso del formulario ---- */
 .rep-progress { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:22px 0 22px; }
 .rep-step {
   display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:14px;
@@ -623,7 +586,6 @@ html[data-theme="light"] {
 .rep-step.is-active { color:var(--bl); border-color:rgba(33,150,243,.5); background:var(--borde2); }
 .rep-step.is-active .rep-step-n { background:var(--grn); color:#fff; }
 
-/* ---- estructura ---- */
 .rep-layout { display:grid; grid-template-columns:1fr; gap:22px; align-items:start; padding-bottom:48px; }
 @media (min-width:1100px) { .rep-layout { grid-template-columns:minmax(0,1fr) 380px; gap:26px; } }
 .rep-main { display:flex; flex-direction:column; gap:22px; min-width:0; }
@@ -641,7 +603,6 @@ html[data-theme="light"] {
 .rep-card-head h2 { font-family:'Plus Jakarta Sans',sans-serif; font-size:1.12rem; font-weight:800; letter-spacing:-.01em; color:var(--bl); }
 .rep-card-head p { font-size:.82rem; color:var(--gs); margin-top:2px; }
 
-/* ---- campos ---- */
 .rep-field { margin-bottom:16px; }
 .rep-field:last-child { margin-bottom:0; }
 .rep-label { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:.72rem; font-weight:700; color:var(--gt); text-transform:uppercase; letter-spacing:.05em; margin-bottom:7px; }
@@ -667,7 +628,6 @@ textarea.rep-input { min-height:140px; resize:vertical; line-height:1.55; }
 .rep-row { display:grid; grid-template-columns:1fr; gap:16px; }
 @media (min-width:700px) { .rep-row-2 { grid-template-columns:1fr 1fr; } }
 
-/* ---- tipos de emergencia (tarjetas) ---- */
 .rep-tipos { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:12px; }
 .rep-tipo { position:relative; cursor:pointer; display:block; }
 .rep-tipo input { position:absolute; opacity:0; inset:0; cursor:pointer; }
@@ -694,7 +654,6 @@ textarea.rep-input { min-height:140px; resize:vertical; line-height:1.55; }
 .rep-tipo-check svg { width:13px; height:13px; }
 .rep-tipo input:checked + .rep-tipo-box .rep-tipo-check { opacity:1; transform:scale(1); }
 
-/* ---- mapa ---- */
 .rep-map { height:clamp(300px, 44vh, 480px); border-radius:16px; overflow:hidden; border:1px solid var(--borde); background:var(--n4); position:relative; z-index:0; }
 .rep-map-fallback { height:100%; display:grid; place-items:center; color:var(--gs); font-size:.85rem; padding:20px; text-align:center; }
 .rep-map-tools { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:12px; }
@@ -713,7 +672,6 @@ textarea.rep-input { min-height:140px; resize:vertical; line-height:1.55; }
 .rep-btn-ghost svg { width:15px; height:15px; }
 .rep-btn-ghost.is-loading { opacity:.7; pointer-events:none; }
 
-/* ---- descripcion y afectados ---- */
 .rep-counter { font-size:.74rem; color:var(--gs); font-variant-numeric:tabular-nums; }
 .rep-counter.is-ok { color:var(--ok); }
 .rep-counter.is-bad { color:var(--ra); }
@@ -729,7 +687,6 @@ textarea.rep-input { min-height:140px; resize:vertical; line-height:1.55; }
 }
 .rep-number input::-webkit-outer-spin-button, .rep-number input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 
-/* ---- evidencias ---- */
 .rep-drop {
   display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; padding:30px 20px; border-radius:16px;
   border:2px dashed var(--n6); background:var(--input-bg); cursor:pointer; transition:all .2s;
@@ -754,7 +711,6 @@ textarea.rep-input { min-height:140px; resize:vertical; line-height:1.55; }
 }
 .rep-file-x:hover { background:var(--ra); }
 
-/* ---- resumen lateral ---- */
 .rep-side { display:flex; flex-direction:column; gap:16px; }
 @media (min-width:1100px) { .rep-side { position:sticky; top:84px; } }
 .rep-summary {
@@ -804,7 +760,6 @@ textarea.rep-input { min-height:140px; resize:vertical; line-height:1.55; }
   .rep-tipos { grid-template-columns:repeat(2,1fr); }
 }
 
-/* ---- detalle del reporte ---- */
 .det-banner {
   display:flex; align-items:center; gap:18px; padding:22px 26px; margin:22px 0 4px; border-radius:20px;
   background:linear-gradient(135deg, rgba(0,200,83,.16), rgba(0,200,83,.05)); border:1px solid rgba(0,200,83,.35);
@@ -880,7 +835,6 @@ textarea.rep-input { min-height:140px; resize:vertical; line-height:1.55; }
 .lightbox-x:hover { background:rgba(255,255,255,.22); }
 .lightbox-cap { position:absolute; bottom:18px; left:0; right:0; text-align:center; color:#cbd5e1; font-size:.82rem; }
 
-/* ---- listados (mis reportes / gestion) ---- */
 .lst-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px,1fr)); gap:14px; margin:22px 0; }
 .lst-stat { background:var(--card-bg); border:1px solid var(--borde); border-radius:16px; padding:16px 18px; box-shadow:var(--shadow-sm); position:relative; overflow:hidden; }
 .lst-stat::before { content:''; position:absolute; inset:0 0 auto 0; height:3px; background:var(--grn); }
@@ -906,12 +860,10 @@ textarea.rep-input { min-height:140px; resize:vertical; line-height:1.55; }
 .lst-empty h3 { font-family:'Plus Jakarta Sans',sans-serif; font-size:1.1rem; font-weight:800; margin-bottom:6px; }
 .lst-empty p { color:var(--gs); font-size:.88rem; margin-bottom:18px; }
 
-/* El menu desplegable no debe crear scroll horizontal en pantallas pequenas */
 @media (max-width: 720px) {
   .nav-menu-panel { left:auto; right:0; max-width:calc(100vw - 32px); }
 }
 
-/* ===== Organismos de atencion (pagina informativa) ===== */
 .org-alert { display:flex; gap:16px; align-items:center; margin:22px 0 8px; padding:18px 22px; border-radius:var(--radius); background:color-mix(in srgb, var(--ra) 10%, var(--card-bg)); border:1px solid color-mix(in srgb, var(--ra) 35%, transparent); }
 .org-alert-ico { width:46px; height:46px; border-radius:14px; display:grid; place-items:center; background:var(--ra); color:#fff; flex-shrink:0; }
 .org-alert-ico svg { width:22px; height:22px; }
@@ -950,12 +902,10 @@ textarea.rep-input { min-height:140px; resize:vertical; line-height:1.55; }
 .org-cta p { color:var(--gs); font-size:.88rem; }
 @media (max-width:720px){ .org-grid { grid-template-columns:1fr; } .org-alert { align-items:flex-start; } }
 
-/* ===== Aviso de municipio detectado desde el mapa ===== */
 .rep-hint-warn { color:var(--am); font-weight:600; }
 .rep-link { background:none; border:0; padding:0; margin-left:4px; cursor:pointer; color:var(--va); font-weight:700; font-size:inherit; text-decoration:underline; }
 .rep-link:hover { color:var(--vn); }
 
-/* ===== Estados del reporte, asignacion y seguimiento ===== */
 .pill-st-pendiente   { color:var(--am); background:rgba(255,179,0,.12); border-color:rgba(255,179,0,.3); }
 .pill-st-asignado    { color:var(--vn); background:rgba(33,150,243,.13); border-color:rgba(33,150,243,.32); }
 .pill-st-en_atencion { color:#B388FF; background:rgba(179,136,255,.13); border-color:rgba(179,136,255,.32); }
@@ -995,7 +945,6 @@ html[data-theme="light"] .pill-st-en_atencion { color:#6A1B9A; }
 .det-hist p { margin-top:6px; font-size:.84rem; color:var(--gt); line-height:1.5; }
 @media (max-width:720px){ .act-row { grid-template-columns:1fr; } .act-btn { justify-self:stretch; } }
 
-/* ===== HU-08 · Mapa de emergencias ===== */
 .mp-bar { display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between; margin:22px 0 14px; }
 .mp-prios { display:flex; flex-wrap:wrap; gap:10px; }
 .mp-prio { --c:var(--p-media); display:inline-flex; align-items:center; gap:9px; padding:9px 16px; border-radius:var(--radius-pill); cursor:pointer;
@@ -1035,7 +984,6 @@ html[data-theme="light"] .pill-st-en_atencion { color:#6A1B9A; }
   background:color-mix(in srgb, var(--n2) 55%, transparent); backdrop-filter:blur(2px); }
 .mp-empty[hidden] { display:none; } .mp-empty b { font-family:'Plus Jakarta Sans',sans-serif; color:var(--bl); font-size:1.05rem; } .mp-empty span { color:var(--gt); font-size:.88rem; }
 
-/* marcadores */
 .mk-wrap { background:none; border:0; }
 .mk { --c:var(--p-media); position:relative; width:var(--s); height:var(--s); border-radius:50% 50% 50% 0; transform:rotate(-45deg); background:var(--c);
   border:3px solid #fff; box-shadow:0 6px 14px rgba(0,0,0,.4); display:grid; place-items:center; transition:transform .2s; }
@@ -1047,7 +995,6 @@ html[data-theme="light"] .pill-st-en_atencion { color:#6A1B9A; }
 @keyframes mkPulse { from { transform:scale(.7); opacity:.9; } to { transform:scale(1.5); opacity:0; } }
 @media (prefers-reduced-motion:reduce) { .mk.is-pulse::after, .mp-live-dot.is-live { animation:none; } }
 
-/* ventana emergente */
 .mp-map .mp-popup .leaflet-popup-content-wrapper { background:var(--card-bg); color:var(--bl); border:1px solid var(--borde); border-radius:16px; box-shadow:var(--shadow-lg); padding:0; }
 .mp-map .mp-popup .leaflet-popup-content { margin:0; width:auto !important; }
 .mp-map .mp-popup .leaflet-popup-tip { background:var(--card-bg); }
@@ -1065,7 +1012,6 @@ html[data-theme="light"] .pill-st-en_atencion { color:#6A1B9A; }
 .pp-btn { display:block; margin-top:12px; text-align:center; padding:10px; border-radius:11px; font-size:.82rem; font-weight:700; color:#fff !important; background:var(--gr); text-decoration:none; }
 .pp-btn:hover { filter:brightness(1.1); }
 
-/* lista lateral */
 .mp-side { background:var(--card-bg); border:1px solid var(--borde); border-radius:var(--radius); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; height:clamp(480px, 72vh, 760px); }
 .mp-side-head { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:16px 18px 12px; border-bottom:1px solid var(--borde2); }
 .mp-side-head h2 { font-family:'Plus Jakarta Sans',sans-serif; font-size:1rem; font-weight:800; display:flex; align-items:center; gap:8px; }
@@ -1098,13 +1044,9 @@ html[data-theme="light"] .pill-st-en_atencion { color:#6A1B9A; }
 
 html[data-theme="dark"] .mp-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9) saturate(.8); }
 
-/* =====================================================================
-   INICIO CENTRADO (lh2-*)
-   ===================================================================== */
 .lh2-hero { position:relative; display:flex; justify-content:center; text-align:center; padding:clamp(56px,9vw,112px) 0 clamp(40px,6vw,72px); isolation:isolate; overflow-x:clip; overflow-y:visible; }
 .lh2-inner { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; max-width:1040px; }
 
-/* Radar de fondo */
 .lh2-radar {
   position:absolute; z-index:0; left:50%; top:50%; width:min(900px,140vw); aspect-ratio:1; transform:translate(-50%,-50%);
   pointer-events:none; -webkit-mask-image:radial-gradient(circle, #000 28%, transparent 70%); mask-image:radial-gradient(circle, #000 28%, transparent 70%);
@@ -1165,7 +1107,6 @@ html[data-theme="dark"] .lh2-btn-ghost { color:var(--vn); }
 html[data-theme="dark"] .lh2-stats b { color:var(--vn); }
 .lh2-stats span { font-size:.74rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--gs); }
 
-/* Secciones centradas */
 .lh2-sec { padding:clamp(48px,7vw,88px) 0; border-top:1px solid var(--borde2); text-align:center; }
 .lh2-head { max-width:700px; margin:0 auto clamp(28px,4vw,48px); }
 .lh2-head h2 { font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(1.6rem,3.2vw,2.3rem); letter-spacing:-.025em; line-height:1.15; color:var(--bl); text-wrap:balance; }
@@ -1209,9 +1150,6 @@ html[data-theme="dark"] .lh2-stats b { color:var(--vn); }
 }
 @media (prefers-reduced-motion:reduce) { .lh2-sweep, .lh2-badge i { animation:none; } }
 
-/* =====================================================================
-   PERFIL (pf-*)
-   ===================================================================== */
 .pf { padding-bottom:64px; }
 .pf-head { margin-top:28px; border-radius:26px; background:var(--card-bg); border:1px solid var(--borde); box-shadow:var(--shadow); overflow:hidden; }
 .pf-cover { position:relative; height:150px; background:var(--grad-hero); overflow:hidden; }
@@ -1295,9 +1233,6 @@ html[data-theme="dark"] .pf-nav a.is-on { color:var(--vn); }
   .pf-card { padding:22px 18px; } .pf-row { grid-template-columns:1fr; } .pf-actions .pf-btn { width:100%; }
 }
 
-/* =====================================================================
-   RECUPERAR CONTRASEÑA (rc-*)
-   ===================================================================== */
 .lforgot { text-align:right; margin:-4px 0 14px; font-size:.82rem; }
 .lforgot a:hover { text-decoration:underline; }
 .rc-card { max-width:480px; padding:34px 32px 30px; }
@@ -1328,8 +1263,6 @@ html[data-theme="dark"] .pf-nav a.is-on { color:var(--vn); }
 @media (max-width:480px) { .rc-card { padding:28px 20px 24px; } .rc-steps li { font-size:.64rem; } }
 @media (prefers-reduced-motion:reduce) { .rc-icon::before, .rc-icon::after { animation:none; } }
 
-
-/* ===== NOTIFICACIONES (HU-15) ===== */
 .nf-menu { position:relative; }
 .nf-btn {
   position:relative; width:38px; height:38px; display:flex; align-items:center; justify-content:center;
@@ -1399,7 +1332,6 @@ html[data-theme="dark"] .pf-nav a.is-on { color:var(--vn); }
   .nf-card { padding:14px; }
 }
 
-/* ===== MAPA PUBLICO (visitantes) ===== */
 .lh2-maplink { display:inline-flex; align-items:center; gap:8px; margin-top:22px; font-weight:700; font-size:.88rem; color:var(--gt); text-decoration:none; border-bottom:1px solid transparent; }
 .lh2-maplink:hover { color:var(--va); border-bottom-color:var(--va); }
 .mp-pub { display:flex; flex-wrap:wrap; gap:14px 22px; align-items:center; justify-content:space-between; margin:20px 0 0; padding:16px 20px; border:1px solid var(--borde); border-radius:16px; background:var(--card-bg); }
@@ -1408,8 +1340,6 @@ html[data-theme="dark"] .pf-nav a.is-on { color:var(--vn); }
 .mp-pub-actions { display:flex; gap:10px; flex-wrap:wrap; }
 .pp-pub { margin:10px 0 0; font-size:.76rem; color:var(--gs); }
 
-
-/* ===== VALIDACIONES DE FORMULARIOS ===== */
 .vf-msg { display:block; margin-top:6px; font-size:.76rem; line-height:1.4; color:var(--gs); }
 .vf-msg:empty { display:none; }
 .vf-msg.bad { color:var(--ra); } .vf-msg.ok { color:var(--ok); }
@@ -1424,13 +1354,10 @@ html[data-theme="dark"] .pf-nav a.is-on { color:var(--vn); }
 .vf-rules li.is-bad { color:var(--gt); }
 @media (max-width:420px) { .vf-rules { grid-template-columns:1fr; } }
 
-/* ===== LOGO NUEVO ===== */
 .brand-emblem { display:block; height:42px; width:auto; border-radius:11px; box-shadow:0 4px 14px rgba(33,150,243,.35); flex-shrink:0; }
 .llogo-img { display:block; width:176px; max-width:60%; height:auto; margin:0 auto 14px; border-radius:22px; box-shadow:0 14px 36px rgba(33,150,243,.28); }
 .sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); border:0; }
 
-
-/* ===== LOGO NUEVO (circular, sin modificar) + FONDO ===== */
 .brand-emblem { height:54px; width:54px; border-radius:50%; box-shadow:0 0 0 1px rgba(100,181,246,.25), 0 4px 18px rgba(33,150,243,.45); object-fit:cover; transition:transform .2s ease, box-shadow .2s ease; }
 .brand:hover .brand-emblem { transform:scale(1.05); box-shadow:0 0 0 1px rgba(100,181,246,.45), 0 6px 24px rgba(33,150,243,.6); }
 .llogo-img { width:170px; max-width:62%; height:auto; aspect-ratio:1; border-radius:50%; box-shadow:0 0 0 1px rgba(100,181,246,.25), 0 16px 44px rgba(33,150,243,.38); }
@@ -1443,8 +1370,6 @@ html[data-theme="light"] .bg-logo img { opacity:.15; filter:blur(60px) saturate(
 @media (max-width:640px) { .brand-emblem { height:46px; width:46px; } .bg-logo img { width:150vmin; opacity:.28; } }
 @media (prefers-reduced-motion:reduce) { .bg-logo img { animation:none; } }
 
-
-/* ===== ESTADISTICAS (HU-17) ===== */
 .es-filtros { margin:22px 0 18px; padding:18px 20px; border:1px solid var(--borde); border-radius:18px; background:var(--card-bg); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; gap:14px; }
 .es-chips { display:flex; flex-wrap:wrap; gap:8px; }
 .es-chip { padding:7px 15px; border-radius:999px; border:1px solid var(--borde); background:transparent; color:var(--gt); font-weight:700; font-size:.8rem; cursor:pointer; transition:background .15s, color .15s, border-color .15s; }
@@ -1517,8 +1442,6 @@ button.es-barra.is-on { border-color:var(--va); background:rgba(33,150,243,.1); 
 .es-linea.es-fina { stroke-width:1.7; }
 @media (min-width:1100px) { .es-kpis { grid-template-columns:repeat(3, minmax(0,1fr)); } }
 
-
-/* ===== DASHBOARD GENERAL (HU-18) ===== */
 .tb-barra { margin:22px 0 16px; padding:14px 18px; border:1px solid var(--borde); border-radius:18px; background:var(--card-bg); box-shadow:var(--shadow-sm); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 18px; }
 .tb-der { display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; }
 .tb-der .es-estado { margin-right:4px; }
@@ -1534,7 +1457,6 @@ button.es-barra.is-on { border-color:var(--va); background:rgba(33,150,243,.1); 
 @media (min-width:1100px) { .tb-kpis { grid-template-columns:repeat(4, minmax(0,1fr)); } }
 @media (max-width:640px) { .tb-barra { padding:14px; } .tb-der { width:100%; } .tb-der .es-estado { width:100%; } .tb-der .rep-btn-ghost, .tb-der .btn-cta { flex:1; text-align:center; justify-content:center; } }
 
-/* ===== Boton flotante de soporte por WhatsApp ===== */
 .wa-soporte {
   position:fixed; right:24px; bottom:24px; z-index:1050;
   display:inline-flex; align-items:center; gap:10px;
@@ -1552,9 +1474,7 @@ button.es-barra.is-on { border-color:var(--va); background:rgba(33,150,243,.1); 
 }
 @keyframes wa-flotar { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
 @keyframes wa-pulso { 0% { opacity:.55; transform:scale(1); } 100% { opacity:0; transform:scale(1.35); } }
-/* No tapa el visor de evidencias ni el aviso del mapa */
 body:has(.lightbox.is-open) .wa-soporte { display:none; }
-/* En celular solo se muestra el icono */
 @media (max-width:640px) {
   .wa-soporte { right:16px; bottom:16px; padding:14px; }
   .wa-soporte span { display:none; }

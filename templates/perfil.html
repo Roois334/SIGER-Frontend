@@ -11,7 +11,6 @@
 
 <div class="container pf" id="inicio">
 
-  <!-- ===== Encabezado ===== -->
   <header class="pf-head animate-in">
     <div class="pf-cover" aria-hidden="true">
       <i></i><i></i><i></i>
@@ -68,7 +67,6 @@
 
   <div class="pf-layout">
 
-    <!-- ===== Índice lateral ===== -->
     <nav class="pf-nav animate-in" aria-label="Secciones del perfil">
       <a href="#datos" class="is-on" data-pf="datos">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -90,7 +88,6 @@
 
     <div class="pf-main">
 
-      <!-- ===== Datos personales ===== -->
       <section class="pf-card animate-in" id="datos">
         <div class="pf-card-head">
           <h2>Datos personales</h2>
@@ -153,7 +150,6 @@
         </form>
       </section>
 
-      <!-- ===== Correo ===== -->
       <section class="pf-card animate-in" id="correo">
         <div class="pf-card-head">
           <h2>Correo electrónico</h2>
@@ -178,7 +174,6 @@
         </form>
       </section>
 
-      <!-- ===== Contraseña ===== -->
       <section class="pf-card animate-in" id="seguridad">
         <div class="pf-card-head">
           <h2>Contraseña</h2>
@@ -219,7 +214,6 @@
         </form>
       </section>
 
-      <!-- ===== Sesión ===== -->
       <section class="pf-card pf-card-sesion animate-in" id="sesion">
         <div class="pf-card-head">
           <h2>Sesión</h2>
@@ -236,7 +230,6 @@
 
 <script>
 (function () {
-  // Marca la seccion visible en el indice lateral
   var links = document.querySelectorAll(".pf-nav a");
   if ("IntersectionObserver" in window) {
     var io = new IntersectionObserver(function (es) {

@@ -4,7 +4,6 @@ from utilities.permisos import puede
 
 
 def login_required(view):
-    """Exige que haya una sesion iniciada; si no, redirige al login."""
     @wraps(view)
     def wrapped(*args, **kwargs):
         if "usuario" not in session:
@@ -15,7 +14,6 @@ def login_required(view):
 
 
 def admin_required(view):
-    """Exige sesion iniciada Y rol 'administrador'; si no, redirige al panel."""
     @wraps(view)
     def wrapped(*args, **kwargs):
         if "usuario" not in session:
@@ -29,10 +27,6 @@ def admin_required(view):
 
 
 def permiso_required(permiso):
-    """
-    Exige sesion iniciada Y el permiso indicado en utilities/permisos.py.
-    Uso: @permiso_required("reportes.crear")
-    """
     def decorador(view):
         @wraps(view)
         def wrapped(*args, **kwargs):

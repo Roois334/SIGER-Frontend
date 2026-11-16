@@ -8,7 +8,6 @@ instance/
 .vs/
 _respaldo_codigo/
 parche_*.py
-# Pruebas y cobertura
 .pytest_cache/
 .coverage
 .coverage.*

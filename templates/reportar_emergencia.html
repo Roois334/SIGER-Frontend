@@ -29,7 +29,6 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="rep-main">
 
-      <!-- 1 · TIPO -->
       <section class="rep-card animate-in" id="sec-tipo">
         <div class="rep-card-head">
           <div class="rep-num">1</div>
@@ -51,7 +50,6 @@
         <span class="rep-error" id="error-tipo"></span>
       </section>
 
-      <!-- 2 · UBICACION -->
       <section class="rep-card animate-in" id="sec-ubicacion">
         <div class="rep-card-head">
           <div class="rep-num">2</div>
@@ -97,7 +95,6 @@
         </div>
       </section>
 
-      <!-- 3 · DETALLES -->
       <section class="rep-card animate-in" id="sec-detalles">
         <div class="rep-card-head">
           <div class="rep-num">3</div>
@@ -128,7 +125,6 @@
         </div>
       </section>
 
-      <!-- 4 · EVIDENCIAS -->
       <section class="rep-card animate-in" id="sec-evidencias">
         <div class="rep-card-head">
           <div class="rep-num">4</div>
@@ -150,7 +146,6 @@
       </section>
     </div>
 
-    <!-- RESUMEN -->
     <aside class="rep-side">
       <div class="rep-summary animate-in">
         <h3>Resumen de tu reporte</h3>
@@ -206,7 +201,6 @@
   var latInput = $("latitud");
   var lonInput = $("longitud");
 
-  /* ------------------------------------------------------------ errores */
   var temporizadorMapa = null;
   function errorMapa(mensaje) {
     setError("mapa", mensaje);
@@ -219,10 +213,8 @@
     if (campo) campo.classList.toggle("is-invalid", !!mensaje);
   }
 
-  /* ------------------------------------------------------------ tipo */
   function tipoSeleccionado() { return form.querySelector('input[name="tipo"]:checked'); }
 
-  /* ------------------------------------------------------------ mapa */
   var CENTROS = {
     "facatativa": [4.8143, -74.3547], "madrid": [4.7329, -74.2644], "mosquera": [4.7059, -74.2302],
     "funza": [4.7160, -74.2113], "bojaca": [4.7357, -74.3416], "el rosal": [4.8517, -74.2630],
@@ -241,8 +233,7 @@
     return o && o.value ? o.textContent.trim() : "";
   }
 
-  /* ---- Municipio detectado a partir del punto marcado en el mapa ---- */
-  var muniDetectado = "";   // nombre normalizado del municipio donde cae el marcador
+  var muniDetectado = "";
 
   function distKm(a, b) {
     var t = Math.PI / 180, dLa = (b[0] - a[0]) * t, dLo = (b[1] - a[1]) * t;
@@ -256,7 +247,6 @@
     }
     return -1;
   }
-  /* Respaldo sin internet: el municipio (de la lista) con el centro mas cercano, a maximo 12 km */
   function municipioMasCercano(lat, lon) {
     var mejor = "", dMejor = 1e9;
     for (var i = 1; i < campoMuni.options.length; i++) {
@@ -288,7 +278,6 @@
       h.appendChild(b);
     }
   }
-  /* El marcador manda: el municipio se ajusta solo al lugar donde se pone el punto */
   function aplicarMunicipioDetectado(nombreNorm) {
     var i = nombreNorm ? indiceMunicipio(nombreNorm) : -1;
     if (i < 0) return;
@@ -340,14 +329,11 @@
     actualizarChip(); actualizarResumen();
   }
 
-  /* Autocompleta direccion y municipio con OpenStreetMap (si falla, no pasa nada) */
   function geocodificar(lat, lon) {
-    // Respuesta inmediata (sin internet): municipio mas cercano al punto
     aplicarMunicipioDetectado(municipioMasCercano(lat, lon));
     var url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=es&lat=" + lat + "&lon=" + lon;
     fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
       if (!d) return;
-      // Si mientras tanto se movio o quito el marcador, se ignora esta respuesta
       if (!latInput.value || Math.abs(parseFloat(latInput.value) - lat) > 0.0001 || Math.abs(parseFloat(lonInput.value) - lon) > 0.0001) return;
       var a = d.address || {};
       var via = [a.road, a.house_number].filter(Boolean).join(" ");
@@ -416,7 +402,6 @@
     mostrarHintMunicipio(); actualizarResumen();
   });
 
-  /* ------------------------------------------------------------ validaciones */
   var validar = {
     tipo: function () {
       var ok = !!tipoSeleccionado();
@@ -501,7 +486,6 @@
     });
   });
 
-  /* ------------------------------------------------------------ evidencias */
   var archivos = [];
   var inputEv = $("campo-evidencias");
   var lista = $("lista-evidencias");
@@ -515,7 +499,7 @@
       var dt = new DataTransfer();
       archivos.forEach(function (f) { dt.items.add(f); });
       inputEv.files = dt.files;
-    } catch (e) { /* navegadores muy antiguos: se enviaran los elegidos por el input */ }
+    } catch (e) {  }
   }
 
   function dibujarArchivos() {
@@ -573,7 +557,6 @@
   zona.addEventListener("drop", function (e) { if (e.dataTransfer && e.dataTransfer.files) agregarArchivos(e.dataTransfer.files); });
   zona.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inputEv.click(); } });
 
-  /* ------------------------------------------------------------ resumen y progreso */
   function marcar(nombre, ok, texto) {
     var li = document.querySelector('[data-check="' + nombre + '"]');
     if (li) li.classList.toggle("is-ok", ok);
@@ -604,7 +587,6 @@
       pr.innerHTML = 'Prioridad <span class="pill pill-' + p + '">' + (CFG.prioridades[p] || p) + "</span>";
     } else { pr.textContent = ""; }
 
-    // Pasos superiores: el primero sin completar es el activo
     var estado = { tipo: okTipo, ubicacion: okMuni && okDir, detalles: okDesc, evidencias: archivos.length > 0 };
     var activo = ["tipo", "ubicacion", "detalles", "evidencias"].filter(function (k) { return !estado[k]; })[0];
     document.querySelectorAll(".rep-step").forEach(function (s) {
@@ -614,7 +596,6 @@
     });
   }
 
-  /* ------------------------------------------------------------ envio */
   var enviando = false;
   form.addEventListener("submit", function (e) {
     if (enviando) { e.preventDefault(); return; }
@@ -631,12 +612,10 @@
     btn.disabled = true;
     $("txt-enviar").textContent = archivos.length ? "Subiendo evidencias…" : "Enviando…";
   });
-  // Si el usuario vuelve atras con el boton del navegador, se reactiva el boton
   window.addEventListener("pageshow", function (e) {
     if (e.persisted) { enviando = false; $("btn-enviar").disabled = false; $("txt-enviar").textContent = "Enviar reporte"; }
   });
 
-  /* ------------------------------------------------------------ inicio */
   iniciarMapa();
   if (latInput.value && lonInput.value) {
     muniDetectado = municipioMasCercano(parseFloat(latInput.value), parseFloat(lonInput.value));

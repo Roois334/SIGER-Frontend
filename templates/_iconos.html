@@ -1,4 +1,3 @@
-{# Iconos por tipo de emergencia. Uso: {% from "_iconos.html" import icono_tipo %}{{ icono_tipo(r.tipo) }} #}
 {% macro icono_tipo(tipo, tam=22) -%}
 {%- set t = (tipo or '')|lower -%}
 <svg class="ico-tipo" viewBox="0 0 24 24" width="{{ tam }}" height="{{ tam }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

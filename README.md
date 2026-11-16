@@ -100,4 +100,4 @@ pip install -r requirements.txt -r requirements-dev.txt
 python -m pytest
 ```
 
-Como viaja la contrasena (HTTPS en los dos tramos), el CI y SonarQube estan en [CALIDAD_Y_SEGURIDAD.md](CALIDAD_Y_SEGURIDAD.md).
+En GitHub Actions las pruebas corren en cada cambio junto con SonarQube.

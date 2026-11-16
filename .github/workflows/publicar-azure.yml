@@ -1,12 +1,9 @@
-# Publica el frontend en Azure (siger-frontend-2716) cada vez que se sube algo a main.
-# No usa contrasenas: Azure confia en GitHub (OIDC) a traves de la identidad
-# administrada "siger-github-deploy", que solo puede publicar en las apps de SIGER.
 name: Publicar en Azure
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # tambien se puede lanzar a mano desde la pestana Actions
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -17,7 +14,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Primero las pruebas y SonarQube (ci.yml). Si fallan, no se publica nada.
   ci:
     uses: ./.github/workflows/ci.yml
     secrets: inherit
