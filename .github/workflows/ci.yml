@@ -24,7 +24,8 @@ jobs:
     timeout-minutes: 15
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      # Sin SONAR_HOST_URL se usa SonarQube Cloud; con un servidor propio, define ese secreto
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,9 +59,9 @@ jobs:
           if-no-files-found: ignore
 
       - name: Analisis de SonarQube
-        if: env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != ''
+        if: env.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@v7
 
       - name: Aviso - SonarQube omitido
-        if: env.SONAR_TOKEN == '' || env.SONAR_HOST_URL == ''
-        run: echo "::warning title=SonarQube omitido::Define los secretos SONAR_TOKEN y SONAR_HOST_URL en GitHub (Settings > Secrets and variables > Actions)."
+        if: env.SONAR_TOKEN == ''
+        run: echo "::warning title=SonarQube omitido::Define el secreto SONAR_TOKEN en GitHub (Settings > Secrets and variables > Actions)."
